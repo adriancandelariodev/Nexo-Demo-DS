@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Nexo Desarrollo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --bg:#F3F5F8;--surface:#FFFFFF;--surface-2:#EEF1F5;--ink:#15202B;--muted:#5A6676;--line:#DCE1E8;
+  --accent:#2B59C3;--accent-ink:#FFFFFF;--accent-soft:#E5ECFA;--side:#15202B;--side-ink:#C9D3DF;--side-active:#243345;
+  --ok:#1C8556;--ok-soft:#E1F3EA;--warn:#A86A12;--warn-soft:#FBF0DC;--crit:#C03C28;--crit-soft:#FBE6E2;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Instrument Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;--bg:#0E1319;--surface:#151C24;--surface-2:#1B2430;--ink:#E5EAF0;--muted:#94A1B0;--line:#27313D;
+  --accent:#7FA3F2;--accent-ink:#0E1319;--accent-soft:#1B2944;--side:#0A0F14;--side-ink:#AEBACB;--side-active:#1B2944;
+  --ok:#4DC48B;--ok-soft:#133226;--warn:#E3AA4C;--warn-soft:#352812;--crit:#F07B64;--crit-soft:#3A1A15;}}
+:root[data-theme="dark"]{
+  color-scheme:dark;--bg:#0E1319;--surface:#151C24;--surface-2:#1B2430;--ink:#E5EAF0;--muted:#94A1B0;--line:#27313D;
+  --accent:#7FA3F2;--accent-ink:#0E1319;--accent-soft:#1B2944;--side:#0A0F14;--side-ink:#AEBACB;--side-active:#1B2944;
+  --ok:#4DC48B;--ok-soft:#133226;--warn:#E3AA4C;--warn-soft:#352812;--crit:#F07B64;--crit-soft:#3A1A15;}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h2{font-size:1.35rem}h3{font-size:1rem}p{margin:0}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+
+.app{display:grid;grid-template-columns:auto minmax(0,1fr);min-height:100dvh}
+aside{background:var(--side);color:var(--side-ink);padding:18px 12px;display:flex;flex-direction:column;gap:18px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.brand{display:flex;align-items:center;gap:12px;padding:0 8px}
+aside{width:230px;transition:width .4s cubic-bezier(.2,.8,.2,1),padding .4s cubic-bezier(.2,.8,.2,1)}
+aside>*{min-width:206px}
+.app.collapsed aside{width:0;padding-inline:0;overflow:hidden}
+.navtoggle{flex:none;width:38px;height:38px;display:grid;place-items:center;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;transition:transform .3s,background .2s}
+.navtoggle:hover{background:var(--accent-soft);color:var(--accent)}
+.app.collapsed .navtoggle{transform:rotate(180deg)}
+/* logo 3D */
+.logo3d{--s:30px;width:var(--s);height:var(--s);perspective:calc(var(--s)*5);flex:none;display:inline-block}
+.cube{position:relative;display:block;width:100%;height:100%;transform-style:preserve-3d;animation:cubespin 12s linear infinite}
+.cube i{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;font-family:var(--mono);font-weight:700;font-size:calc(var(--s)*.3);color:#fff;border-radius:calc(var(--s)*.16);border:1px solid rgba(255,255,255,.35);backface-visibility:visible}
+.cube .f1{background:linear-gradient(135deg,#2B59C3,#2FA7C9);transform:translateZ(calc(var(--s)/2))}
+.cube .f2{background:linear-gradient(135deg,#2FA7C9,#2B59C3);transform:rotateY(180deg) translateZ(calc(var(--s)/2))}
+.cube .f3{background:linear-gradient(135deg,#2449A3,#2B8FB0);transform:rotateY(90deg) translateZ(calc(var(--s)/2))}
+.cube .f4{background:linear-gradient(135deg,#2B8FB0,#2449A3);transform:rotateY(-90deg) translateZ(calc(var(--s)/2))}
+.cube .f5{background:linear-gradient(135deg,#4F7FE6,#43C0DD);transform:rotateX(90deg) translateZ(calc(var(--s)/2))}
+.cube .f6{background:#1C3A82;transform:rotateX(-90deg) translateZ(calc(var(--s)/2))}
+@keyframes cubespin{from{transform:rotateX(-24deg) rotateY(0deg)}to{transform:rotateX(-24deg) rotateY(360deg)}}
+.brand:hover .cube{animation-duration:2.5s}
+.brand .logo3d{margin:4px 6px 4px 2px}
+/* login 3D */
+.bgcubes{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+.bgc{position:absolute;opacity:.28;animation:floaty 9s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-22px) rotate(8deg)}}
+.login .box{position:relative;z-index:1;animation:pop3d .7s cubic-bezier(.2,.8,.2,1) both;box-shadow:0 24px 60px -20px rgba(20,40,90,.35)}
+@keyframes pop3d{from{transform:perspective(900px) rotateX(14deg) translateY(24px) scale(.97);opacity:.2}to{transform:none;opacity:1}}
+/* vistas y tarjetas */
+section[data-view].enter{animation:enter3d .5s cubic-bezier(.2,.8,.2,1)}
+@keyframes enter3d{from{opacity:.3;transform:perspective(1400px) rotateX(5deg) translateY(14px)}to{opacity:1;transform:none}}
+.kpi,.pcard,.wdg,.hero .hi,.card,.alert{transition:transform .18s ease-out,box-shadow .25s;will-change:transform}
+.kpi:hover,.pcard:hover,.wdg:hover,.card:hover{box-shadow:0 14px 30px -18px rgba(20,40,90,.45)}
+.btn{transition:transform .15s,box-shadow .2s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 6px 14px -8px var(--accent)}
+aside nav button{transition:background .2s,transform .2s}
+aside nav button:hover{transform:translateX(3px)}
+.brand b{font-family:var(--display);font-size:1.2rem;color:#fff}
+.brand small{display:block;font-size:.72rem;color:var(--side-ink)}
+aside nav{display:grid;gap:2px}
+aside nav button{font:inherit;font-size:.9rem;font-weight:500;text-align:left;background:none;border:0;color:var(--side-ink);padding:9px 10px;border-radius:7px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px}
+aside nav button:hover{background:var(--side-active)}
+aside nav button[aria-current="page"]{background:var(--side-active);color:#fff;font-weight:600}
+aside nav .cnt{font-family:var(--mono);font-size:.7rem;background:var(--crit);color:#fff;border-radius:999px;padding:0 7px}
+.navsep{font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;padding:10px 10px 2px;opacity:.6}
+.me{margin-top:auto;display:flex;gap:10px;align-items:center;padding:10px 8px 0;border-top:1px solid rgba(255,255,255,.08)}
+.me .who{flex:1;min-width:0;font-size:.84rem;line-height:1.3}.me .who b{color:#fff;display:block}.me .who small{font-size:.72rem}
+.me .avatar{background:#2B59C3;color:#fff;grid-row:auto}
+.me button{font:inherit;font-size:.78rem;background:none;border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:6px;padding:4px 9px;cursor:pointer}
+.rolechip{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px 12px;color:var(--muted);justify-self:start}
+.rolechip b{color:var(--ink)}
+.login{position:fixed;inset:0;z-index:20;background:var(--bg);display:grid;place-items:center;padding:16px;overflow-y:auto}
+.login .box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px;max-width:440px;width:100%;display:grid;gap:18px}
+.login .opt{display:grid;gap:10px;border:1px solid var(--line);border-radius:10px;padding:14px}
+.login .opt p{font-size:.84rem;color:var(--muted)}
+.gbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%}
+.perm{font-size:.86rem}
+aside nav .mini{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.1);color:#fff;font-size:.62rem;font-weight:700;display:inline-grid;place-items:center;flex:none}
+aside nav button.pbtn{justify-content:flex-start;padding:6px 10px;font-size:.86rem}
+.topbar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px}
+.focusbar{display:flex;align-items:center;gap:8px;font-size:.84rem;font-weight:600;color:var(--muted)}
+.focusbar select{width:auto;font-weight:600;color:var(--ink)}
+.focusbar.on select{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.hero{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr);gap:12px}
+.hero .hi{background:var(--accent);color:var(--accent-ink);border-radius:12px;padding:20px 22px;display:grid;gap:6px;align-content:center}
+.hero .hi h2{font-size:1.7rem}
+.hero .hi p{opacity:.85;font-size:.92rem}
+.wdg{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:grid;gap:6px;align-content:start}
+.clock{font-family:var(--display);font-size:2.4rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+.clock small{font-size:1rem;color:var(--muted);font-weight:600}
+.wx{display:flex;align-items:center;gap:12px}
+.wx b{font-family:var(--display);font-size:2.4rem;line-height:1}
+.wxh{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:4px;font-size:.74rem;text-align:center;color:var(--muted)}
+.wxh b{display:block;color:var(--ink);font-family:var(--mono);font-size:.8rem}
+.wdg select{width:auto;padding:3px 8px;font-size:.78rem}
+.pgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.pcard{font:inherit;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:6px;cursor:pointer;color:var(--ink)}
+.pcard:hover{border-color:var(--accent)}
+.phead{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.bigav{width:52px;height:52px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;font-size:1.05rem}
+.login form{display:grid;gap:14px}
+.login .err{background:var(--crit-soft);color:var(--crit);font-size:.84rem;padding:8px 10px;border-radius:6px}
+.login details{font-size:.82rem;color:var(--muted)}
+.login details summary{cursor:pointer;font-weight:600}
+.acc{display:grid;gap:4px;margin-top:8px}
+.acc button{font:inherit;font-size:.8rem;text-align:left;background:var(--surface-2);border:0;border-radius:6px;padding:5px 8px;color:var(--ink);cursor:pointer;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.acc button span{color:var(--muted);font-family:var(--mono);font-size:.74rem}
+.or{display:flex;align-items:center;gap:10px;font-size:.76rem;color:var(--muted)}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+@media (max-width:980px){.hero{grid-template-columns:1fr 1fr}.hero .hi{grid-column:1/-1}.pgrid{grid-template-columns:1fr 1fr}}
+@media (max-width:520px){.hero{grid-template-columns:1fr}}.perm td:not(:first-child),.perm th:not(:first-child){text-align:center}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--muted)}
+.me select{font:inherit;font-size:.82rem;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:4px 6px;width:100%}
+.me select option{color:#000}
+
+main{padding-inline:28px;padding-block:22px 48px;min-width:0;display:grid;grid-template-columns:minmax(0,1fr);gap:20px;align-content:start;max-width:1240px}
+.page-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:end;gap:12px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:2px}
+.kpi b{font-family:var(--display);font-size:1.9rem;font-weight:700;font-variant-numeric:tabular-nums}
+.kpi .d{font-size:.8rem}
+.grid-2>*,section[data-view]>*{min-width:0}
+.grid-2{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:20px;align-items:start}
+
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:.76rem;font-weight:600;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.s-bloq{background:var(--crit-soft);color:var(--crit)}.s-prog{background:var(--accent-soft);color:var(--accent)}
+.s-rev{background:var(--warn-soft);color:var(--warn)}.s-ok{background:var(--ok-soft);color:var(--ok)}
+.s-todo{background:var(--surface-2);color:var(--muted)}
+
+.tscroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+.bar{display:flex;align-items:center;gap:8px;min-width:120px}
+.bar i{flex:1;height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden;display:block}
+.bar i span{display:block;height:100%;background:var(--accent)}
+.bar em{font-style:normal;font-family:var(--mono);font-size:.8rem;width:3.2em;text-align:right}
+.lk{font-family:var(--mono);font-size:.68rem;font-weight:600;padding:2px 6px;border-radius:4px;border:1px solid var(--line);color:var(--muted);text-decoration:none;white-space:nowrap}
+.links{display:flex;gap:4px;flex-wrap:wrap}
+
+.att{list-style:none;margin:0;padding:0;display:grid}
+.att li{display:grid;grid-template-columns:4px 1fr auto;gap:12px;padding:10px 0;border-top:1px solid var(--line);align-items:center}
+.att li:first-child{border-top:0;padding-top:0}
+.att .sv{align-self:stretch;border-radius:2px;background:var(--warn)}
+.att .sv.c{background:var(--crit)}
+.att p{font-size:.84rem;color:var(--muted)}
+
+.feed{list-style:none;margin:0;padding:0;display:grid}
+.feed li{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;padding:10px 0;border-top:1px solid var(--line)}
+.feed li:first-child{border-top:0;padding-top:0}
+.avatar{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:.72rem;font-weight:700;background:var(--surface-2);grid-row:span 2}
+.sumline{font-family:var(--mono);font-size:.8rem}
+.feed .meta{font-size:.8rem;color:var(--muted)}
+.new-flag{animation:flash 1.6s ease-out}
+@keyframes flash{from{background:var(--accent-soft)}to{background:transparent}}
+
+/* form */
+.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.form .full{grid-column:1/-1}
+.field{display:grid;gap:6px;align-content:start}
+.field label,.field .lbl{font-size:.82rem;font-weight:600}
+.field .hint{font-size:.76rem;color:var(--muted)}
+input[type=text],input[type=url],input[type=date],select,textarea{font:inherit;font-size:.92rem;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);width:100%;min-width:0}
+textarea{min-height:76px;resize:vertical}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.statusgrp{display:flex;flex-wrap:wrap;gap:6px}
+.statusgrp label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:.84rem;font-weight:600;cursor:pointer}
+.statusgrp input{accent-color:var(--accent);margin:0}
+.statusgrp label:has(input:checked){border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.blkbox{border:1px dashed var(--crit);background:var(--crit-soft);border-radius:8px;padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{font:inherit;font-weight:600;font-size:.9rem;border-radius:8px;padding:9px 16px;cursor:pointer;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.sm{padding:4px 10px;font-size:.78rem;white-space:nowrap}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.preview{background:var(--surface-2);border-radius:8px;padding:12px;font-family:var(--mono);font-size:.84rem;overflow-wrap:anywhere}
+
+/* kanban */
+.kanban{display:grid;grid-template-columns:repeat(4,minmax(200px,1fr));gap:12px;min-width:840px}
+.col{background:var(--surface-2);border-radius:10px;padding:10px;display:grid;gap:8px;align-content:start}
+.col h3{font-size:.84rem;display:flex;justify-content:space-between;padding:2px 4px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;display:grid;gap:6px;font-size:.85rem}
+.card.bl{border-left:3px solid var(--crit)}
+.cardbtn{font:inherit;text-align:left;color:var(--ink);cursor:pointer;width:100%}
+.cardbtn:hover{border-color:var(--accent)}
+.cardbtn .edl{color:var(--accent);font-weight:600}
+.editbar{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--accent-soft);color:var(--accent);padding:8px 12px;border-radius:8px;font-size:.86rem;font-weight:600}
+.card .ft{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:.74rem;color:var(--muted)}
+.card .over{color:var(--crit);font-weight:600}
+
+/* build */
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cmp .panel{display:grid;gap:8px;align-content:start}
+.cmp ul,.doc ul{margin:0;padding-left:18px;display:grid;gap:5px;font-size:.9rem}
+.stack{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.stack dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:.86rem}
+.stack dt{font-family:var(--mono);font-size:.78rem;color:var(--accent);font-weight:600}
+.stack dd{margin:0;color:var(--muted)}
+pre.code{font-family:var(--mono);font-size:.76rem;line-height:1.55;background:var(--surface-2);border-radius:8px;padding:14px;overflow-x:auto;margin:0}
+.gantt{display:grid;grid-template-columns:minmax(170px,1.3fr) repeat(5,minmax(60px,1fr));gap:4px;font-size:.8rem;min-width:560px;align-items:center}
+.gantt .wk{font-size:.7rem;color:var(--muted);text-align:center;font-family:var(--mono)}
+.gantt .nm{font-weight:600;font-size:.82rem}
+.gantt .gb{height:24px;border-radius:5px;font-size:.7rem;font-weight:600;display:flex;align-items:center;padding:0 8px;white-space:nowrap;overflow:hidden}
+.g1{background:var(--accent);color:var(--accent-ink)}.g2{background:var(--accent-soft);color:var(--accent)}.g3{background:var(--warn-soft);color:var(--warn)}.g4{background:var(--ok-soft);color:var(--ok)}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:.9rem;font-weight:600;z-index:10}
+.flag{font-size:.74rem;color:var(--muted)}
+
+@media (max-width:980px){.grid-2,.cmp,.stack{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr}
+  aside{position:sticky;top:env(safe-area-inset-top,0px);height:auto;z-index:5;padding:10px 16px;gap:8px;flex-direction:row;flex-wrap:wrap;align-items:center}
+  aside nav{display:flex;overflow-x:auto;width:100%;scrollbar-width:none}
+  aside nav button{white-space:nowrap}
+  .navsep,.me .who{display:none}
+  aside,.app.collapsed aside{width:auto;padding-inline:16px;overflow:visible}
+  aside>*{min-width:0}
+  .app.collapsed aside nav{display:none}
+  .me{margin:0 0 0 auto;padding:0;border:0}
+  main{padding-inline:16px}
+  .form,.blkbox{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){.new-flag,.cube,.bgc,.login .box,section[data-view].enter{animation:none}aside,.navtoggle,.btn,aside nav button{transition:none}}
+</style>
+</head>
+<body>
+
+
+<div class="app">
+<aside>
+  <div class="brand">
+    <span class="logo3d" style="--s:30px" aria-hidden="true"><span class="cube"><i class="f1">&lt;/&gt;</i><i class="f2">{ }</i><i class="f3">DS</i><i class="f4">#</i><i class="f5"></i><i class="f6"></i></span></span>
+    <div><b>Nexo</b><small>Desarrollo de Software</small></div>
+  </div>
+  <nav aria-label="Principal" data-role="lider">
+    <span class="navsep">Jefatura</span>
+    <button data-v="inicio">Panel general</button>
+    <button data-v="proyectos">Proyectos</button>
+    <button data-v="revisar">Por revisar <span class="cnt" id="nrev" style="background:var(--ok)">3</span></button>
+    <button data-v="bloqueos">Bloqueos <span class="cnt" id="nblk">3</span></button>
+    <span class="navsep">Equipo</span>
+    <div id="teamnav" style="display:contents"></div>
+    <span class="navsep">Demo</span>
+    <button data-v="construir">Cómo se construye</button>
+  </nav>
+  <nav aria-label="Principal" data-role="dev" hidden>
+    <span class="navsep">Mi trabajo</span>
+    <button data-v="dinicio">Inicio</button>
+    <button data-v="registrar">Registrar actividad</button>
+    <button data-v="misact">Mis actividades</button>
+    <button data-v="misblk">Mis bloqueos <span class="cnt" id="nmblk">1</span></button>
+    <span class="navsep">Demo</span>
+    <button data-v="construir">Cómo se construye</button>
+  </nav>
+  <div class="me"><span class="avatar" id="me-av">JZ</span><div class="who"><b id="me-name">Jaz</b><small id="me-role">Líder del equipo</small></div><button id="logout" type="button">Salir</button></div>
+</aside>
+
+<main>
+<p class="flag">Vista demo con datos de ejemplo. Nombres, clientes y cifras son ficticios.</p>
+<div class="topbar"><div class="row" style="gap:10px;flex-wrap:nowrap"><button class="navtoggle" id="navtoggle" type="button" aria-label="Ocultar menú" aria-expanded="true"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/></svg></button><p class="rolechip" id="rolechip"></p></div><label class="focusbar" id="focusbar">Revisando a <select id="focus" aria-label="Colaborador a revisar"></select></label></div>
+
+<!-- INICIO -->
+<section data-view="inicio" style="display:grid;gap:20px">
+  <div class="hero" id="hero">
+    <div class="hi"><p class="label" style="color:inherit;opacity:.8" id="hi-date">Domingo 27 de septiembre</p><h2 id="hi-greet">Bienvenida, Jaz</h2><p id="hi-sub">Hay 3 proyectos que requieren tu atención y 5 avances nuevos desde ayer.</p></div>
+    <div class="wdg"><span class="label">Hora · Ciudad de México</span><div class="clock" id="clk">--:--<small></small></div><span class="muted" style="font-size:.82rem" id="clk-d">UTC−6 · horario del centro</span></div>
+    <div class="wdg"><div class="row" style="justify-content:space-between"><span class="label">Clima</span><select id="wx-city" aria-label="Ciudad"><option value="cdmx">Ciudad de México</option><option value="mty">Monterrey</option><option value="gdl">Guadalajara</option></select></div>
+      <div class="wx"><svg id="wx-ic" width="46" height="46" viewBox="0 0 48 48" aria-hidden="true"></svg><div><b id="wx-t">19°</b></div><div style="font-size:.82rem"><div id="wx-c" style="font-weight:600">Parcialmente nublado</div><div class="muted" id="wx-m">Máx 23° · Mín 12° · Lluvia 40%</div></div></div>
+      <div class="wxh" id="wx-h"></div><span class="muted" style="font-size:.7rem">Datos de ejemplo. En producción se consultan de un servicio de clima.</span></div>
+  </div>
+  <div class="page-head"><div><p class="label">Semana 39 · 21 al 25 sep 2026</p><h2>Panel general</h2></div>
+    <div class="row"><select aria-label="Filtrar por cliente" id="fcli" style="width:auto"><option value="">Todos los clientes</option></select></div></div>
+  <div class="kpis">
+    <div class="kpi"><span class="label">Avances registrados</span><b id="k-av">35</b><span class="d muted">de 40 esperados (8 × 5 días)</span></div>
+    <div class="kpi"><span class="label">Actividades cerradas</span><b>38</b><span class="d" style="color:var(--ok)">+6 vs semana 38</span></div>
+    <div class="kpi"><span class="label">Bloqueos abiertos</span><b style="color:var(--crit)" id="k-bl">3</b><span class="d muted">Más antiguo: 6 días</span></div>
+    <div class="kpi"><span class="label">Actividades vencidas</span><b style="color:var(--warn)">2</b><span class="d muted">Mirasol, Transportes Norte</span></div>
+  </div>
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-head"><h3>Avance por proyecto</h3><span class="muted" style="font-size:.8rem">% = actividades cerradas ÷ totales</span></div>
+      <div class="tscroll" id="tproj"></div>
+    </div>
+    <div style="display:grid;gap:20px">
+      <div class="panel">
+        <div class="panel-head"><h3>Completadas por revisar</h3><button class="btn ghost sm" data-go="revisar">Ver todas</button></div>
+        <ul class="att" id="irev"></ul>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Requieren atención</h3><span class="muted" style="font-size:.8rem">Reglas automáticas</span></div>
+        <ul class="att">
+          <li><span class="sv c"></span><div><b>Constructora Mirasol</b><p>Bloqueo abierto hace 6 días · actividad vencida</p></div><span class="pill s-bloq">Crítico</span></li>
+          <li><span class="sv"></span><div><b>Transportes Norte</b><p>Diego sin registrar avance desde el 22/09</p></div><span class="pill s-rev">Atención</span></li>
+          <li><span class="sv"></span><div><b>DIMANOR</b><p>Bloqueo por acceso a producción · vence 03/10</p></div><span class="pill s-rev">Atención</span></li>
+        </ul>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Últimos avances</h3></div>
+        <ul class="feed" id="feed"></ul>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>Resumen semanal por persona</h3><span class="muted" style="font-size:.8rem">Lun–Vie</span></div>
+    <div class="tscroll" id="tppl"></div>
+  </div>
+</section>
+
+<!-- REGISTRAR -->
+<section data-view="registrar" style="display:none;gap:20px">
+  <div class="page-head"><div><p class="label" id="reg-lbl">Ana Ríos · viernes 25/09</p><h2 id="reg-title">Registrar actividad del día</h2></div>
+    <p class="muted" style="font-size:.88rem" id="reg-sub">Registra una actividad nueva. Para actualizar una existente, ábrela desde Mis actividades.</p></div>
+  <div class="grid-2">
+    <form class="panel form" id="frm" novalidate>
+      <div class="full editbar" id="f-editbar" hidden><span id="f-editlbl">Editando actividad</span><button type="button" class="btn ghost sm" id="f-cancel">Cancelar edición</button></div>
+      <div class="field"><label for="f-proj">Proyecto</label><select id="f-proj"></select><span class="hint">Cliente y proyecto donde trabajas</span></div>
+      <div class="field"><label for="f-act">Actividad</label><input type="text" id="f-act" placeholder="Ej. Validación de catálogos" autocomplete="off"><span class="hint">Escribe el nombre de la actividad</span></div>
+      <div class="field full"><label for="f-desc">Descripción de la actividad</label><textarea id="f-desc" placeholder="Qué avanzaste hoy en esta actividad"></textarea></div>
+      <div class="field full"><span class="lbl">Estatus</span>
+        <div class="statusgrp" id="f-st">
+          <label><input type="radio" name="st" value="Por hacer">Por hacer</label>
+          <label><input type="radio" name="st" value="En progreso" checked>En progreso</label>
+          <label id="st-bloq" hidden><input type="radio" name="st" value="Bloqueado">Bloqueado</label>
+          <label><input type="radio" name="st" value="Completado">Completado</label>
+        </div><span class="hint" id="st-hint"></span></div>
+      <div class="field full"><label for="f-pct">Avance de la actividad: <span class="mono" id="pctv">0%</span></label><input type="range" id="f-pct" min="0" max="100" step="5" value="0"></div>
+      <div class="blkbox full" id="blkbox" hidden>
+        <div class="field"><label for="f-btipo">Tipo de bloqueo</label><select id="f-btipo"><option>Accesos / permisos</option><option>Dependencia del cliente</option><option>Dependencia interna</option><option>Técnico / bug</option><option>Información faltante</option><option>Infraestructura</option></select></div>
+        <div class="field"><label for="f-bquien">¿Quién lo destraba?</label><input type="text" id="f-bquien" placeholder="Ej. TI · Infraestructura"></div>
+        <div class="field" style="grid-column:1/-1"><label for="f-bdesc">Descripción del bloqueo</label><input type="text" id="f-bdesc" placeholder="Qué te impide avanzar"></div>
+      </div>
+      <div class="field full"><label for="f-next">Siguiente acción</label><input type="text" id="f-next" placeholder="Qué sigue en esta actividad"></div>
+      <div class="field"><label for="f-ini">Fecha de inicio</label><input type="date" id="f-ini"></div>
+      <div class="field" id="f-finwrap" hidden><label for="f-fin">Fecha fin</label><input type="date" id="f-fin"></div>
+      <div class="field full"><span class="lbl">Entregables</span>
+        <div class="row" style="flex-wrap:nowrap"><select id="f-lt" aria-label="Tipo" style="width:auto;flex:none"><option>Drive</option><option>Excel</option><option>Miro</option></select><input type="url" id="f-lu" placeholder="Pega el enlace y Enter" aria-label="URL"></div>
+        <div class="links" id="f-ll"></div></div>
+      <div class="row full"><button class="btn" type="submit" id="f-submit">Guardar actividad</button><button class="btn ghost" type="button" id="f-clear">Limpiar</button></div>
+    </form>
+    <div style="display:grid;gap:20px">
+      <div class="panel" style="display:grid;gap:10px"><h3>Así lo verá Jaz</h3><div class="preview" id="prev"></div>
+        <p class="muted" style="font-size:.8rem">El resumen se arma con los campos del formulario. No hay que escribirlo.</p></div>
+      <div class="panel" style="display:grid;gap:8px"><h3>Mis actividades abiertas</h3><p class="muted" style="font-size:.8rem;margin-top:-4px">Toca Editar para actualizar avance, fechas o reportar un bloqueo.</p><div class="tscroll" id="mine"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- PROYECTOS -->
+<section data-view="proyectos" style="display:none;gap:20px">
+  <div class="page-head"><div><p class="label">Tablero</p><h2 id="kb-title">DIMANOR · Integración de clientes</h2></div>
+    <div class="row"><select id="kb-proj" aria-label="Proyecto" style="width:auto"></select></div></div>
+  <div class="row" id="kb-meta"></div>
+  <p class="muted" style="font-size:.84rem">Solo lectura. Cada colaborador actualiza sus actividades desde su registro diario.</p>
+  <div class="tscroll"><div class="kanban" id="kanban"></div></div>
+</section>
+
+<!-- BLOQUEOS -->
+<section data-view="bloqueos" style="display:none;gap:20px">
+  <div class="page-head"><div><p class="label">Seguimiento</p><h2>Bloqueos</h2></div>
+    <p class="muted" style="font-size:.88rem">Tiempo medio de resolución este mes: <b class="mono">1.9 días</b></p></div>
+  <div class="panel tscroll" id="tblk"></div>
+</section>
+
+<!-- REVISAR -->
+<section data-view="revisar" style="display:none;gap:20px">
+  <div class="page-head"><div><p class="label">Jefatura</p><h2>Actividades por revisar</h2></div>
+    <p class="muted" style="font-size:.88rem">Cuando un colaborador llega a 100%, la actividad llega aquí. Apruébala o devuélvela para ajustes.</p></div>
+  <div class="panel tscroll" id="trev"></div>
+</section>
+
+<!-- INICIO COLABORADOR -->
+<section data-view="dinicio" style="display:none;gap:20px">
+  <div class="page-head"><div><p class="label">Mi trabajo</p><h2>Mis proyectos</h2></div>
+    <div class="row"><button class="btn" data-go="registrar">Registrar actividad</button><button class="btn ghost" data-go="misact">Ver mis actividades</button></div></div>
+  <div class="kpis" id="dh-kpis"></div>
+  <div class="grid-2" id="dh-proj" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))"></div>
+</section>
+
+<!-- PERSONA -->
+<section data-view="persona" style="display:none;gap:20px" id="v-persona"></section>
+
+<!-- MIS ACTIVIDADES -->
+<section data-view="misact" style="display:none;gap:20px">
+  <div class="page-head"><div><p class="label">Mi trabajo</p><h2>Mis actividades</h2></div>
+    <p class="muted" style="font-size:.88rem">Toca una actividad para editarla.</p></div>
+  <div class="tscroll"><div class="kanban" id="mkanban"></div></div>
+</section>
+
+<!-- MIS BLOQUEOS -->
+<section data-view="misblk" style="display:none;gap:20px">
+  <div class="page-head"><div><p class="label">Mi trabajo</p><h2>Mis bloqueos</h2></div>
+    <p class="muted" style="font-size:.88rem">Márcalos como resueltos en cuanto se destraben.</p></div>
+  <div class="panel tscroll" id="tmblk"></div>
+</section>
+
+<!-- CONSTRUIR -->
+<section data-view="construir" style="display:none;gap:24px" class="doc">
+  <div><p class="label">Propuesta técnica</p><h2>Nexo como aplicativo web, sin motor de IA</h2>
+    <p class="muted" style="max-width:72ch;margin-top:8px">El equipo captura datos estructurados en formularios, así que no hace falta interpretar texto. El sistema queda como una aplicación CRUD con reglas de negocio y reportes. Es más simple, más barata y sale en la mitad del tiempo.</p></div>
+
+  <div class="cmp">
+    <div class="panel"><h3>Qué cambia</h3><ul>
+      <li>El reporte en texto libre se reemplaza por un formulario con proyecto, actividad, estatus, % y bloqueo.</li>
+      <li>El resumen para Jaz se arma con los campos, sin extracción.</li>
+      <li>Se elimina el servicio de Python, el etiquetado y el reentrenamiento.</li>
+      <li>El avance del proyecto se calcula con las actividades cerradas en vez de estimarse.</li>
+    </ul></div>
+    <div class="panel"><h3>Qué se mantiene</h3><ul>
+      <li>Panel de Jaz, panorama por persona, cliente y proyecto.</li>
+      <li>Detector de riesgos: siempre fue un conjunto de reglas (vencimiento, días sin avance, antigüedad del bloqueo). Corre como tarea programada.</li>
+      <li>Enlaces a Drive, Excel y Miro.</li>
+      <li>Métricas de velocidad a partir de fechas de cierre y de resolución.</li>
+    </ul></div>
+  </div>
+
+  <div class="panel" style="display:grid;gap:8px"><h3>Lo que se pierde</h3>
+    <p class="muted" style="font-size:.9rem;max-width:72ch">Capturar es un poco más lento para el dev (unos 40 segundos contra 15 del texto libre) y la calidad depende de que elija bien el estatus. Se compensa con campos obligatorios mínimos y valores precargados del último registro. Si más adelante quieren IA, el texto de “¿Qué hiciste hoy?” ya queda guardado y sirve como datos de entrenamiento, con los campos del formulario como etiquetas.</p></div>
+
+  <div style="display:grid;gap:12px"><h3>Roles y permisos</h3>
+  <p class="muted" style="font-size:.9rem;max-width:72ch">El rol viene de la tabla <span class="mono">usuarios</span> al iniciar sesión con el correo de la empresa (contraseña guardada con hash Argon2, o SSO de Google Workspace limitado al dominio de la empresa). La API revisa el rol en cada petición y filtra por <span class="mono">usuario_id</span>, así que ocultar un botón en pantalla no es la única protección: un colaborador no puede leer datos de otros aunque llame la API directo.</p>
+  <div class="panel tscroll"><table class="perm"><thead><tr><th>Acción</th><th>Jaz (líder)</th><th>Colaborador</th></tr></thead><tbody>
+    <tr><td>Ver panel general, KPIs y resumen por persona</td><td class="yes">Sí</td><td class="no">No</td></tr>
+    <tr><td>Ver todos los proyectos y tableros</td><td class="yes">Sí</td><td class="no">No</td></tr>
+    <tr><td>Ver bloqueos de todo el equipo</td><td class="yes">Sí</td><td class="no">Solo los suyos</td></tr>
+    <tr><td>Ver alertas de riesgo</td><td class="yes">Sí</td><td class="no">No</td></tr>
+    <tr><td>Pedir actualización a un colaborador</td><td class="yes">Sí</td><td class="no">No</td></tr>
+    <tr><td>Registrar avance diario</td><td class="no">No</td><td class="yes">Sí</td></tr>
+    <tr><td>Cambiar estatus o % de una actividad</td><td class="no">No</td><td class="yes">Solo las suyas</td></tr>
+    <tr><td>Abrir y resolver bloqueos</td><td class="no">No</td><td class="yes">Solo los suyos</td></tr>
+    <tr><td>Agregar enlaces de Drive, Excel y Miro</td><td class="no">No</td><td class="yes">Sí</td></tr>
+  </tbody></table></div>
+<pre class="code">// Next.js: middleware.ts
+const RUTAS = { lider: ['/panel', '/proyectos', '/bloqueos'],
+                dev:   ['/registrar', '/mis-actividades', '/mis-bloqueos'] };
+if (!RUTAS[session.user.rol].some(r =&gt; path.startsWith(r))) return redirect(inicioDe(session.user.rol));
+
+// API: cada consulta del colaborador se filtra por su id
+prisma.actividad.findMany({ where: { responsableId: session.user.id } });
+// POST /api/avances → 403 si session.user.rol !== 'dev'</pre></div>
+
+  <div style="display:grid;gap:12px"><h3>Stack</h3>
+  <div class="stack">
+    <div class="panel"><p class="label" style="margin-bottom:8px">Frontend</p><dl>
+      <dt>Next.js</dt><dd>React + TypeScript</dd><dt>shadcn/ui</dt><dd>Formularios, tablas, tablero</dd>
+      <dt>React Hook Form + Zod</dt><dd>Validación del registro</dd><dt>Recharts</dt><dd>Gráficas</dd><dt>dnd-kit</dt><dd>Arrastrar tarjetas en el tablero</dd></dl></div>
+    <div class="panel"><p class="label" style="margin-bottom:8px">Backend</p><dl>
+      <dt>Next.js API routes</dt><dd>Un solo proyecto, sin servicio aparte</dd><dt>Prisma</dt><dd>ORM y migraciones</dd>
+      <dt>Auth.js</dt><dd>Login con Google Workspace</dd><dt>Cloud Scheduler</dt><dd>Reglas de riesgo diarias y mensaje a Google Chat</dd></dl></div>
+    <div class="panel"><p class="label" style="margin-bottom:8px">Datos y despliegue</p><dl>
+      <dt>PostgreSQL</dt><dd>Cloud SQL</dd><dt>Cloud Run</dt><dd>Un contenedor</dd>
+      <dt>BigQuery</dt><dd>Réplica diaria para Tableau (opcional)</dd></dl></div>
+  </div>
+  <p class="muted" style="font-size:.84rem">Si el equipo domina más Python, FastAPI + React o Django también funcionan. Lo importante es que sea un solo backend.</p></div>
+
+  <div style="display:grid;gap:12px"><h3>Esquema simplificado</h3>
+  <p class="muted" style="font-size:.9rem;max-width:72ch">Se eliminan <span class="mono">extracciones</span> y <span class="mono">etiquetas</span>. El registro diario se vuelve <span class="mono">avances</span>, ligado directo a una actividad.</p>
+<pre class="code">usuarios     (id, nombre, email, rol: dev | lider)
+clientes     (id, nombre)
+proyectos    (id, cliente_id → clientes, nombre, lider_id → usuarios, fecha_inicio, fecha_compromiso, estatus)
+actividades  (id, proyecto_id → proyectos, responsable_id → usuarios, titulo, estatus, avance_pct,
+              fecha_vencimiento, creada_en, cerrada_en)
+avances      (id, actividad_id → actividades, usuario_id → usuarios, fecha, estatus, avance_pct,
+              descripcion, siguiente_accion, creado_en)
+bloqueos     (id, actividad_id → actividades, avance_id → avances, tipo, descripcion, responsable_externo,
+              abierto_en, resuelto_en, resuelto_por → usuarios)
+enlaces      (id, tipo: drive | excel | miro | otro, url, titulo, proyecto_id?, actividad_id?, avance_id?)
+alertas      (id, proyecto_id → proyectos, regla, severidad, mensaje, creada_en, atendida_en)
+
+-- avance del proyecto = actividades cerradas / actividades totales (vista SQL)
+-- velocidad          = actividades con cerrada_en en la semana
+-- resolución         = promedio(resuelto_en − abierto_en) en bloqueos</pre></div>
+
+  <div style="display:grid;gap:12px"><h3>Roadmap: 4 semanas al MVP + 1 para riesgos</h3>
+  <div class="panel tscroll"><div class="gantt" id="gantt"></div></div>
+  <div class="panel tscroll"><table><thead><tr><th>Rol</th><th>Personas</th><th>Trabajo</th></tr></thead><tbody>
+    <tr><td><b>Tech lead / PO</b></td><td class="num">1</td><td>Backlog, reglas de riesgo, demo semanal con Jaz</td></tr>
+    <tr><td><b>Frontend</b></td><td class="num">3</td><td>Registro, tablero, panel de Jaz, vistas semanales</td></tr>
+    <tr><td><b>Backend</b></td><td class="num">2</td><td>Esquema, API, auth, cálculo de métricas, tarea de riesgos</td></tr>
+    <tr><td><b>Datos</b></td><td class="num">1</td><td>Vistas SQL de métricas, réplica a BigQuery, carga inicial de catálogos</td></tr>
+    <tr><td><b>QA / DevOps</b></td><td class="num">1</td><td>CI/CD, Cloud Run, pruebas end-to-end</td></tr>
+  </tbody></table></div></div>
+</section>
+</main>
+</div>
+<div class="toast" id="toast" hidden></div>
+<div class="login" id="login">
+  <div class="bgcubes" aria-hidden="true"><span class="bgc" style="left:8%;top:14%;animation-delay:0s"><span class="logo3d" style="--s:70px" aria-hidden="true"><span class="cube"><i class="f1">&lt;/&gt;</i><i class="f2">{ }</i><i class="f3">DS</i><i class="f4">#</i><i class="f5"></i><i class="f6"></i></span></span></span><span class="bgc" style="left:80%;top:10%;animation-delay:-2s"><span class="logo3d" style="--s:46px" aria-hidden="true"><span class="cube"><i class="f1">&lt;/&gt;</i><i class="f2">{ }</i><i class="f3">DS</i><i class="f4">#</i><i class="f5"></i><i class="f6"></i></span></span></span><span class="bgc" style="left:14%;top:72%;animation-delay:-4s"><span class="logo3d" style="--s:52px" aria-hidden="true"><span class="cube"><i class="f1">&lt;/&gt;</i><i class="f2">{ }</i><i class="f3">DS</i><i class="f4">#</i><i class="f5"></i><i class="f6"></i></span></span></span><span class="bgc" style="left:84%;top:66%;animation-delay:-1s"><span class="logo3d" style="--s:84px" aria-hidden="true"><span class="cube"><i class="f1">&lt;/&gt;</i><i class="f2">{ }</i><i class="f3">DS</i><i class="f4">#</i><i class="f5"></i><i class="f6"></i></span></span></span><span class="bgc" style="left:46%;top:86%;animation-delay:-3s"><span class="logo3d" style="--s:36px" aria-hidden="true"><span class="cube"><i class="f1">&lt;/&gt;</i><i class="f2">{ }</i><i class="f3">DS</i><i class="f4">#</i><i class="f5"></i><i class="f6"></i></span></span></span><span class="bgc" style="left:60%;top:4%;animation-delay:-5s"><span class="logo3d" style="--s:28px" aria-hidden="true"><span class="cube"><i class="f1">&lt;/&gt;</i><i class="f2">{ }</i><i class="f3">DS</i><i class="f4">#</i><i class="f5"></i><i class="f6"></i></span></span></span></div>
+  <div class="box">
+    <div class="brand" style="padding:0"><span class="logo3d" style="--s:40px" aria-hidden="true"><span class="cube"><i class="f1">&lt;/&gt;</i><i class="f2">{ }</i><i class="f3">DS</i><i class="f4">#</i><i class="f5"></i><i class="f6"></i></span></span><div><h2 style="font-size:1.4rem">Nexo</h2><span class="muted" style="font-size:.8rem">Área de Desarrollo de Software</span></div></div>
+    <div><h3 style="font-size:1.15rem">Inicia sesión</h3><p class="muted" style="font-size:.86rem;margin-top:4px">Usa tu correo de la empresa. Tu rol se asigna automáticamente.</p></div>
+    <form id="lgform" novalidate>
+      <div class="field"><label for="lg-mail">Correo de la empresa</label><input type="text" id="lg-mail" inputmode="email" autocomplete="username" placeholder="nombre.apellido@tuempresa.mx"></div>
+      <div class="field"><div class="row" style="justify-content:space-between"><label for="lg-pass">Contraseña</label><button type="button" class="btn ghost sm" id="lg-forgot" style="border:0;padding:0">¿La olvidaste?</button></div>
+        <div class="row" style="flex-wrap:nowrap"><input type="password" id="lg-pass" autocomplete="current-password" style="flex:1;font:inherit;font-size:.92rem;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);min-width:0"><button type="button" class="btn ghost sm" id="lg-eye" style="flex:none">Ver</button></div></div>
+      <label class="row" style="font-size:.84rem;gap:8px"><input type="checkbox" id="lg-rem" checked style="accent-color:var(--accent)">Mantener sesión iniciada</label>
+      <p class="err" id="lg-err" hidden></p>
+      <button class="btn gbtn" type="submit">Iniciar sesión</button>
+    </form>
+    <div class="or">o</div>
+    <button class="btn ghost gbtn" type="button" id="lg-google"><svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.5l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.6 5.4 2.7 13.2l7.8 6C12.3 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 7.1-10 7.1-17.5z"/><path fill="#FBBC05" d="M10.5 28.8A14.5 14.5 0 0 1 9.5 24c0-1.7.3-3.3.8-4.8l-7.8-6A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.7-4.1-13.6-9.8l-7.9 6C6.6 42.6 14.6 48 24 48z"/></svg>Continuar con Google Workspace</button>
+    <details><summary>Cuentas de prueba de la demo</summary><p style="margin-top:6px">Contraseña para todas: <span class="mono" style="color:var(--ink)">Nexo2026</span>. Toca una para llenar el formulario.</p><div class="acc" id="acc"></div></details>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const stC=s=>({'Bloqueado':'s-bloq','En progreso':'s-prog','En revisión':'s-rev','Completado':'s-ok','Por hacer':'s-todo'}[s]);
+const PROJ=[
+ {id:1,c:'DIMANOR',p:'Integración de clientes',who:'Ana Ríos',st:'Bloqueado',due:'03/10',lk:['Drive','Miro'],acts:[
+   ['Mapeo de campos cliente','Completado',100,'Ana Ríos','18/09'],['Integración de clientes','Bloqueado',70,'Ana Ríos','03/10'],['Validación en producción','Por hacer',0,'Ana Ríos','03/10'],['Carga histórica','Por hacer',0,'Gabriela Luna','08/10'],['Documentación técnica','En progreso',40,'Gabriela Luna','09/10'],['Pruebas de conexión','Completado',100,'Ana Ríos','21/09'],['Revisión de catálogos','En progreso',90,'Ana Ríos','26/09']]},
+ {id:2,c:'Grupo Altamira',p:'Migración de SP a BigQuery',who:'Bruno Salas',st:'En progreso',due:'16/10',lk:['Drive','Excel'],acts:[
+   ['SP de ventas','Completado',100,'Bruno Salas','15/09'],['SP de cartera','En progreso',50,'Bruno Salas','02/10'],['SP de inventario','Por hacer',0,'Bruno Salas','09/10'],['Vistas de consumo','En progreso',30,'Fernando Gil','12/10'],['Orquestación','Por hacer',0,'Bruno Salas','16/10']]},
+ {id:3,c:'Farmacias del Valle',p:'Dashboard de ventas',who:'Carla Méndez',st:'En progreso',due:'29/09',lk:['Excel'],acts:[
+   ['Modelo de datos','Completado',100,'Carla Méndez','10/09'],['Vistas KPIs','Completado',100,'Carla Méndez','17/09'],['Dashboard Tableau','Completado',100,'Carla Méndez','29/09'],['Capacitación','Por hacer',0,'Carla Méndez','30/09']]},
+ {id:4,c:'Transportes Norte',p:'API de rutas',who:'Diego Ortiz',st:'En progreso',due:'02/10',lk:['Miro'],acts:[
+   ['Diseño de endpoints','Completado',100,'Diego Ortiz','14/09'],['Endpoint de rutas','En progreso',40,'Diego Ortiz','23/09'],['Autenticación','Por hacer',0,'Diego Ortiz','28/09'],['Pruebas de carga','Por hacer',0,'Héctor Vega','02/10']]},
+ {id:5,c:'Constructora Mirasol',p:'Portal de proveedores',who:'Elena Paz',st:'Bloqueado',due:'30/09',lk:['Drive','Miro'],acts:[
+   ['Wireframes','Completado',100,'Elena Paz','11/09'],['Carga de proveedores','Bloqueado',10,'Elena Paz','24/09'],['Formulario de alta','En progreso',30,'Elena Paz','30/09'],['Notificaciones','Por hacer',0,'Elena Paz','30/09']]},
+ {id:6,c:'Interno',p:'Validación ETL (cuadre)',who:'Fernando Gil',st:'Bloqueado',due:'09/10',lk:['Excel'],acts:[
+   ['Cuadre de ventas','Completado',100,'Fernando Gil','16/09'],['Cuadre CorteDiarioVendedor','Bloqueado',60,'Fernando Gil','02/10'],['Cuadre de contratos','En progreso',50,'Gabriela Luna','09/10']]},
+ {id:7,c:'Textiles Sonora',p:'Carga de catálogos',who:'Héctor Vega',st:'Completado',due:'25/09',lk:['Drive','Excel'],acts:[
+   ['Catálogo de productos','Completado',100,'Héctor Vega','22/09'],['Catálogo de clientes','Completado',100,'Héctor Vega','24/09']]}];
+const PEOPLE=[['Ana Ríos','AR',5,6,1],['Bruno Salas','BS',5,5,0],['Carla Méndez','CM',5,7,0],['Diego Ortiz','DO',2,2,0],['Elena Paz','EP',4,3,1],['Fernando Gil','FG',5,5,1],['Gabriela Luna','GL',5,4,0],['Héctor Vega','HV',4,6,0]];
+const FEED=[
+ ['AR','Ana Ríos','09:02','DIMANOR · Integración de clientes | 70% | Bloqueado'],
+ ['CM','Carla Méndez','08:51','FARMACIAS DEL VALLE · Dashboard Tableau | 100% | Completado'],
+ ['FG','Fernando Gil','08:40','INTERNO · Cuadre CorteDiarioVendedor | 60% | Bloqueado'],
+ ['BS','Bruno Salas','08:33','GRUPO ALTAMIRA · SP de cartera | 50% | En progreso']];
+let BLK=[
+ {id:1,p:'Constructora Mirasol',a:'Carga de proveedores',who:'Elena Paz',t:'Dependencia del cliente',d:'El cliente no ha enviado el layout de proveedores',x:'Contacto del cliente',days:6},
+ {id:2,p:'Interno · Cuadre ETL',a:'Cuadre CorteDiarioVendedor',who:'Fernando Gil',t:'Información faltante',d:'Diferencias sin explicar en filtros de fecha',x:'Equipo SINUBE',days:2},
+ {id:3,p:'DIMANOR',a:'Integración de clientes',who:'Ana Ríos',t:'Accesos / permisos',d:'Falta acceso al ambiente de producción',x:'TI · Infraestructura',days:1}];
+const pctOf=p=>Math.round(p.acts.filter(a=>a[1]==='Completado').length/p.acts.length*100);
+
+let focus='';
+const projsFor=()=>PROJ.filter(p=>!focus||p.acts.some(a=>a[3]===focus));
+function renderProj(f){
+ const rows=projsFor().filter(p=>!f||p.c===f);
+ $('tproj').innerHTML='<table><thead><tr><th>Proyecto</th><th>Responsable</th><th>Avance</th><th>Estatus</th><th>Compromiso</th><th>Enlaces</th></tr></thead><tbody>'+
+ rows.map(p=>{const pc=pctOf(p);return `<tr><td><b>${esc(p.c)}</b><br><span class="muted" style="font-size:.8rem">${esc(p.p)}</span></td><td>${esc(p.who)}</td>
+ <td><div class="bar"><i><span style="width:${pc}%;background:${p.st==='Bloqueado'?'var(--crit)':p.st==='Completado'?'var(--ok)':'var(--accent)'}"></span></i><em>${pc}%</em></div></td>
+ <td><span class="pill ${stC(p.st)}">${p.st}</span></td><td class="num">${p.due}</td><td><div class="links">${p.lk.map(l=>`<span class="lk">${l}</span>`).join('')}</div></td></tr>`}).join('')+'</tbody></table>';
+}
+function renderFeed(flash){$('feed').innerHTML=FEED.filter(x=>!focus||x[1]===focus).map((f,k)=>`<li class="${flash&&!k?'new-flag':''}"><span class="avatar">${f[0]}</span><span class="sumline">${esc(f[3])}</span><span class="meta"><b style="color:var(--ink)">${f[1]}</b> · ${f[2]}</span></li>`).join('')}
+function renderPeople(){
+ $('tppl').innerHTML='<table><thead><tr><th>Persona</th><th>Días con registro</th><th>Actividades cerradas</th><th>Bloqueos abiertos</th><th>Proyectos</th></tr></thead><tbody>'+
+ PEOPLE.filter(p=>!focus||p[0]===focus).map(p=>`<tr><td><b>${p[0]}</b></td><td class="num" style="${p[2]<5?'color:var(--crit)':''}">${p[2]}/5</td><td class="num">${p[3]}</td><td class="num">${p[4]}</td><td>${[...new Set(PROJ.filter(x=>x.acts.some(a=>a[3]===p[0])).map(x=>x.c))].map(esc).join(', ')}</td></tr>`).join('')+'</tbody></table>';
+}
+function blkTable(list,action){
+ return list.length?'<table><thead><tr><th>Proyecto / actividad</th><th>Tipo</th><th>Descripción</th><th>Lo destraba</th>'+(action==='resolver'?'':'<th>Responsable</th>')+'<th>Días abierto</th><th></th></tr></thead><tbody>'+
+ list.map(b=>`<tr><td><b>${esc(b.p)}</b><br><span class="muted" style="font-size:.8rem">${esc(b.a)}</span></td><td><span class="pill s-bloq">${esc(b.t)}</span></td><td>${esc(b.d)}</td><td>${esc(b.x)}</td>${action==='resolver'?'':`<td>${esc(b.who)}</td>`}
+ <td class="num" style="${b.days>=5?'color:var(--crit);font-weight:600':''}">${b.days}</td><td>${action==='resolver'?`<button class="btn sm" data-r="${b.id}">Marcar resuelto</button>`:`<button class="btn ghost sm" data-ping="${esc(b.who)}">Pedir actualización</button>`}</td></tr>`).join('')+'</tbody></table>':'<p class="muted">Sin bloqueos abiertos.</p>';
+}
+function renderBlk(){
+ $('tblk').innerHTML=blkTable(BLK.filter(b=>!focus||b.who===focus),'ping');
+ const mineB=BLK.filter(b=>b.who===me);$('tmblk').innerHTML=blkTable(mineB,'resolver');
+ $('nblk').textContent=BLK.length;$('k-bl').textContent=BLK.length;$('nmblk').textContent=mineB.length;$('nmblk').hidden=!mineB.length;
+ document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{BLK=BLK.filter(x=>x.id!=b.dataset.r);renderBlk();toast('Bloqueo resuelto. Jaz ya lo ve cerrado en su panel.')});
+ document.querySelectorAll('[data-ping]').forEach(b=>b.onclick=()=>toast('Se envió un recordatorio a '+b.dataset.ping.split(' ')[0]));
+}
+function renderMine(){
+ const cols=['Por hacer','En progreso','Bloqueado','Completado'];const acts=[];
+ PROJ.forEach(p=>p.acts.forEach(a=>{if(a[3]===me)acts.push({pid:p.id,c:p.c,a})}));
+ $('mkanban').innerHTML=cols.map(c=>{const it=acts.filter(x=>x.a[1]===c);return `<div class="col"><h3>${c}<span class="mono muted">${it.length}</span></h3>${it.map(x=>`<button type="button" class="card cardbtn ${c==='Bloqueado'?'bl':''}" data-ed="${x.pid}" data-n="${esc(x.a[0])}"><span class="label" style="font-size:.66rem">${esc(x.c)}</span><b>${esc(x.a[0])}</b>${x.a[2]&&x.a[2]<100?`<div class="bar" style="min-width:0"><i><span style="width:${x.a[2]}%"></span></i><em>${x.a[2]}%</em></div>`:''}${revPill(x.a)}<div class="ft"><span>${toDM(iniOf(x.a))} → ${x.a[4]}</span><span class="edl">Editar</span></div></button>`).join('')||'<p class="muted" style="font-size:.8rem;padding:4px">Sin actividades</p>'}</div>`}).join('');
+}
+function renderKanban(id){
+ const p=PROJ.find(x=>x.id==id);$('kb-title').textContent=`${p.c} · ${p.p}`;
+ $('kb-meta').innerHTML=`<span class="pill ${stC(p.st)}">${p.st}</span><span class="muted" style="font-size:.86rem">Avance ${pctOf(p)}% · Compromiso ${p.due} · Líder ${esc(p.who)}</span><div class="links">${p.lk.map(l=>`<span class="lk">${l}</span>`).join('')}</div>`;
+ const cols=['Por hacer','En progreso','Bloqueado','Completado'];
+ const today=[25,9];const over=d=>{const[a,b]=d.split('/').map(Number);return b<today[1]||(b===today[1]&&a<today[0])};
+ $('kanban').innerHTML=cols.map(c=>{const it=p.acts.filter(a=>a[1]===c&&(!focus||a[3]===focus));return `<div class="col"><h3>${c}<span class="mono muted">${it.length}</span></h3>${it.map(a=>`<div class="card ${c==='Bloqueado'?'bl':''}"><b>${esc(a[0])}</b>${a[2]&&a[2]<100?`<div class="bar" style="min-width:0"><i><span style="width:${a[2]}%"></span></i><em>${a[2]}%</em></div>`:''}${revPill(a)}<div class="ft"><span>${esc(a[3])}</span><span class="${c!=='Completado'&&over(a[4])?'over':''}">${a[4]}</span></div></div>`).join('')||'<p class="muted" style="font-size:.8rem;padding:4px">Sin actividades</p>'}</div>`}).join('');
+}
+
+/* form */
+let me='Ana Ríos',role=null;
+const initials=n=>n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+let EDIT=null;
+const toISO=d=>{if(!d||!d.includes('/'))return '';const[a,b]=d.split('/');return `2026-${b.padStart(2,'0')}-${a.padStart(2,'0')}`};
+const toDM=iso=>{if(!iso)return '—';const[,m,d]=iso.split('-');return `${d}/${m}`};
+const iniOf=a=>{if(a[5])return a[5];const f=toISO(a[4]);if(!f)return '';const t=new Date(f+'T12:00:00');t.setDate(t.getDate()-14);return t.toISOString().slice(0,10)};
+PROJ[0].acts[1][6]='Terminé la integración de clientes. La validación queda pendiente.';
+PROJ[0].acts[1][7]='Solicitar acceso a producción y reprogramar validación';
+function fillProjs(){$('f-proj').innerHTML=PROJ.filter(p=>p.acts.some(a=>a[3]===me)).map(p=>`<option value="${p.id}">${esc(p.c)} · ${esc(p.p)}</option>`).join('');}
+function stVal(){return document.querySelector('input[name=st]:checked').value}
+function setSt(v){const r=document.querySelector(`input[name=st][value="${v}"]`);if(r)r.checked=true}
+function applyMode(){const ed=!!EDIT;
+ $('f-editbar').hidden=!ed;$('st-bloq').hidden=!ed;$('f-finwrap').hidden=!ed;$('f-proj').disabled=ed;
+ $('reg-title').textContent=ed?'Editar actividad':'Registrar actividad del día';
+ $('reg-sub').textContent=ed?'Actualiza avance, fechas o reporta un bloqueo. Al guardar, Jaz lo ve en su panel.':'Registra una actividad nueva. Para actualizar una existente, ábrela desde Mis actividades.';
+ $('f-submit').textContent=ed?'Guardar cambios':'Guardar actividad';$('f-clear').hidden=ed;
+ if(ed)$('f-editlbl').textContent='Editando: '+EDIT.name;
+ $('st-hint').textContent=ed?'Si algo te detiene, marca Bloqueado y describe el bloqueo. Al llegar a 100% se guarda como Completado.':'Al llegar a 100% se guarda como Completado. Si después se bloquea, repórtalo editando la actividad desde Mis actividades.';}
+function preview(){const p=PROJ.find(x=>x.id==$('f-proj').value);
+ if(!p){$('prev').textContent='No tienes proyectos asignados.';return}
+ const st=stVal();$('blkbox').hidden=!(EDIT&&st==='Bloqueado');$('pctv').textContent=$('f-pct').value+'%';
+ const act=$('f-act').value.trim()||'(nombre de la actividad)';
+ $('prev').innerHTML=`${esc(p.c.toUpperCase())} · ${esc(act)} | Avance: ${$('f-pct').value}% | Estatus: ${st} | Inicio: ${toDM($('f-ini').value)}`+(EDIT?` | Fin: ${toDM($('f-fin').value)}`:'')
+  +(!$('blkbox').hidden?`<br><span style="color:var(--crit)">Bloqueo (${esc($('f-btipo').value)}): ${esc($('f-bdesc').value||'sin descripción')}</span>`:'')
+  +($('f-next').value?`<br><span class="muted">Siguiente: ${esc($('f-next').value)}</span>`:'');}
+function resetNew(){EDIT=null;['f-act','f-desc','f-next','f-bdesc','f-bquien','f-fin'].forEach(i=>$(i).value='');
+ $('f-pct').value=0;setSt('En progreso');$('f-ini').value='2026-09-25';$('f-ll').innerHTML='';applyMode();preview();}
+function openEdit(pid,name){const p=PROJ.find(x=>x.id==pid);const a=p&&p.acts.find(x=>x[0]===name&&x[3]===me);if(!a)return;
+ EDIT={pid:p.id,name};$('f-proj').value=p.id;$('f-act').value=a[0];$('f-desc').value=a[6]||'';$('f-next').value=a[7]||'';
+ $('f-pct').value=a[2];setSt(a[1]);$('f-ini').value=iniOf(a);$('f-fin').value=toISO(a[4]);
+ const bk=BLK.find(b=>b.a===a[0]&&b.who===me);$('f-btipo').value=bk?bk.t:'Accesos / permisos';$('f-bdesc').value=bk?bk.d:'';$('f-bquien').value=bk?bk.x:'';
+ $('f-ll').innerHTML=(p.lk||[]).map(l=>`<span class="lk">${l}</span>`).join('');
+ applyMode();preview();show('registrar');}
+function mine(){const r=[];PROJ.forEach(p=>p.acts.forEach(a=>{if(a[3]===me&&a[1]!=='Completado')r.push({pid:p.id,c:p.c,a})}));
+ $('mine').innerHTML=r.length?'<table><tbody>'+r.map(x=>`<tr><td><b>${esc(x.a[0])}</b><br><span class="muted" style="font-size:.78rem">${esc(x.c)}</span></td><td><span class="pill ${stC(x.a[1])}">${x.a[1]}</span></td><td><button class="btn ghost sm" data-ed="${x.pid}" data-n="${esc(x.a[0])}">Editar</button></td></tr>`).join('')+'</tbody></table>':'<p class="muted">Sin actividades abiertas.</p>';}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-ed]');if(b)openEdit(b.dataset.ed,b.dataset.n)});
+$('kb-proj').innerHTML=PROJ.map(p=>`<option value="${p.id}">${esc(p.c)} · ${esc(p.p)}</option>`).join('');
+$('fcli').innerHTML+=PROJ.map(p=>`<option>${esc(p.c)}</option>`).join('');
+$('fcli').onchange=e=>renderProj(e.target.value);
+$('kb-proj').onchange=e=>renderKanban(e.target.value);
+$('f-proj').onchange=preview;
+['f-act','f-btipo','f-bdesc','f-next','f-ini','f-fin'].forEach(i=>$(i).addEventListener('input',preview));
+$('f-pct').addEventListener('input',()=>{const v=+$('f-pct').value;if(v===100)setSt('Completado');else if(stVal()==='Completado')setSt('En progreso');preview()});
+document.querySelectorAll('input[name=st]').forEach(r=>r.onchange=()=>{const s=stVal();if(s==='Completado')$('f-pct').value=100;else if(+$('f-pct').value===100)$('f-pct').value=95;if(s==='Por hacer')$('f-pct').value=0;preview()});
+$('f-lu').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const u=$('f-lu').value.trim();if(!u)return;$('f-ll').innerHTML+=`<span class="lk">${esc($('f-lt').value)} · enlace</span>`;$('f-lu').value=''}});
+$('f-clear').onclick=resetNew;
+$('f-cancel').onclick=()=>{resetNew();show('misact')};
+$('frm').onsubmit=e=>{e.preventDefault();
+ const p=PROJ.find(x=>x.id==$('f-proj').value);if(!p)return toast('No tienes proyectos asignados.');
+ const name=$('f-act').value.trim();if(!name){$('f-act').focus();return toast('Escribe el nombre de la actividad.')}
+ const pc=+$('f-pct').value;let st=stVal();if(pc===100)st='Completado';
+ if(st==='Bloqueado'&&!$('f-bdesc').value.trim()){$('f-bdesc').focus();return toast('Describe el bloqueo para que Jaz sepa qué lo detiene.')}
+ const wasEdit=!!EDIT;
+ if(EDIT){const a=p.acts.find(x=>x[0]===EDIT.name&&x[3]===me);const old=a[0];
+  if(name!==old&&p.acts.some(x=>x!==a&&x[0].toLowerCase()===name.toLowerCase()&&x[3]===me))return toast('Ya tienes otra actividad con ese nombre.');
+  a[0]=name;a[1]=st;a[2]=pc;if(st==='Completado'){if(a[8]!==true)a[8]=false}else a[8]=undefined;a[4]=toDM($('f-fin').value);a[5]=$('f-ini').value;a[6]=$('f-desc').value;a[7]=$('f-next').value;
+  const bi=BLK.findIndex(b=>b.a===old&&b.who===me);
+  if(st==='Bloqueado'){const b={id:bi>-1?BLK[bi].id:Date.now(),p:p.c,a:name,who:me,t:$('f-btipo').value,d:$('f-bdesc').value.trim(),x:$('f-bquien').value.trim()||'—',days:bi>-1?BLK[bi].days:0};if(bi>-1)BLK[bi]=b;else BLK.unshift(b);}
+  else if(bi>-1)BLK.splice(bi,1);
+ }else{
+  if(p.acts.some(x=>x[0].toLowerCase()===name.toLowerCase()&&x[3]===me))return toast('Ya tienes una actividad con ese nombre. Edítala desde Mis actividades.');
+  p.acts.push([name,st,pc,me,'—',$('f-ini').value,$('f-desc').value,$('f-next').value,st==='Completado'?false:undefined]);
+ }
+ FEED.unshift([initials(me),me,'Ahora',`${p.c.toUpperCase()} · ${name} | ${pc}% | ${st}`]);
+ resetNew();renderFeed(true);renderReview();renderProj($('fcli').value);renderBlk();renderKanban($('kb-proj').value);mine();renderMine();
+ toast(st==='Completado'?'Guardada como Completada. Queda pendiente de revisión de Jaz.':wasEdit?'Cambios guardados. Jaz ya los ve en su panel.':'Actividad registrada. Jaz ya la ve en su panel.');
+ if(wasEdit)show('misact');};
+
+/* gantt */
+const G=[['Infra, auth y esquema',1,1,'g1','Setup'],['Catálogos y carga inicial',1,2,'g2','Clientes, proyectos'],['Registro de avance',2,2,'g1','Formulario'],
+ ['Proyectos y tablero',2,3,'g1','Kanban + enlaces'],['Panel de Jaz',3,4,'g1','KPIs + semanal'],['Bloqueos y métricas',3,4,'g2','Velocidad'],['Piloto con el equipo',4,4,'g4','MVP'],['Reglas de riesgo + Chat',5,5,'g3','Fase 2']];
+let gh='<span></span>'+[1,2,3,4,5].map(w=>`<span class="wk">Sem ${w}</span>`).join('');
+G.forEach(([n,a,b,c,l])=>gh+=`<span class="nm">${n}</span><span class="gb ${c}" style="grid-column:${a+1} / ${b+2}">${l}</span>`);
+$('gantt').innerHTML=gh;
+
+function toast(m){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,2400)}
+const HOME={lider:'inicio',dev:'dinicio'};
+const ALLOWED={lider:['inicio','proyectos','revisar','bloqueos','persona','construir'],dev:['dinicio','registrar','misact','misblk','construir']};
+function show(v){
+ if(!role)return;
+ if(!ALLOWED[role].includes(v))v=HOME[role];
+ document.querySelectorAll('[data-view]').forEach(s=>s.style.display=s.dataset.view===v?'grid':'none');
+ const hv=(v==='registrar'&&EDIT)?'misact':v;
+ document.querySelectorAll('aside nav button').forEach(b=>{if(b.dataset.v===hv&&(v!=='persona'||b.dataset.p===focus))b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+ if(v==='persona')renderPersona();
+ if(v==='inicio'||v==='dinicio'){const sec=document.querySelector(`[data-view="${v}"]`);sec.prepend($('hero'));tick();}
+ if(v==='dinicio')renderHome();
+ const sec=document.querySelector(`[data-view="${v}"]`);if(sec){sec.classList.remove('enter');void sec.offsetWidth;sec.classList.add('enter');countUp(sec);}
+ try{history.replaceState(null,'','#'+v)}catch(e){}window.scrollTo(0,0)}
+document.querySelectorAll('aside nav').forEach(n=>n.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.p)setFocus(b.dataset.p);if(b.dataset.v==='registrar'&&EDIT)resetNew();show(b.dataset.v)}));
+function login(r,name){
+ role=r;me=r==='dev'?name:null;
+ document.querySelectorAll('aside nav').forEach(n=>n.hidden=n.dataset.role!==r);
+ $('me-name').textContent=r==='lider'?'Jaz':name;$('me-role').textContent=r==='lider'?'Líder del equipo':'Colaborador';$('me-av').textContent=r==='lider'?'JZ':initials(name);
+ $('rolechip').innerHTML=r==='lider'?'Sesión de <b>Jaz</b> · ves a todo el equipo y apruebas lo completado':`Sesión de <b>${esc(name)}</b> · solo ves tu trabajo`;
+ $('focusbar').hidden=r!=='lider';if(r==='lider')setFocus('');
+ if(r==='dev'){
+  $('reg-lbl').textContent=name+' · viernes 25/09';
+  fillProjs();resetNew();mine();renderMine();
+ }
+ renderBlk();renderReview();
+ $('login').hidden=true;
+ const h=(location.hash||'').slice(1);show(ALLOWED[r].includes(h)?h:HOME[r]);
+}
+const slug=n=>n.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/ /g,'.');
+const DOMAIN='@tuempresa.mx';
+const ACCOUNTS={['jaz'+DOMAIN]:{role:'lider',name:'Jaz'}};
+PEOPLE.forEach(p=>ACCOUNTS[slug(p[0])+DOMAIN]={role:'dev',name:p[0]});
+$('acc').innerHTML=Object.entries(ACCOUNTS).map(([m,a])=>`<button type="button" data-m="${m}">${esc(a.name)} · ${a.role==='lider'?'Líder':'Colaborador'}<span>${m}</span></button>`).join('');
+$('acc').onclick=e=>{const b=e.target.closest('button');if(!b)return;$('lg-mail').value=b.dataset.m;$('lg-pass').value='Nexo2026';$('lg-err').hidden=true;};
+function lgErr(m){$('lg-err').textContent=m;$('lg-err').hidden=false}
+$('lgform').onsubmit=e=>{e.preventDefault();
+ const m=$('lg-mail').value.trim().toLowerCase(),pw=$('lg-pass').value;
+ if(!m||!pw)return lgErr('Escribe tu correo y tu contraseña.');
+ if(!m.endsWith(DOMAIN))return lgErr('Usa tu correo de la empresa, que termina en '+DOMAIN+'.');
+ const a=ACCOUNTS[m];
+ if(!a||pw!=='Nexo2026')return lgErr('El correo o la contraseña no coinciden. Revisa e inténtalo de nuevo.');
+ $('lg-err').hidden=true;$('lg-pass').value='';login(a.role,a.name);};
+$('lg-eye').onclick=()=>{const i=$('lg-pass');const t=i.type==='password';i.type=t?'text':'password';$('lg-eye').textContent=t?'Ocultar':'Ver'};
+$('lg-forgot').onclick=()=>toast('En producción se envía un enlace de recuperación a tu correo.');
+$('lg-google').onclick=()=>toast('En producción abre el inicio de sesión de Google de la empresa.');
+
+/* colaborador en revisión */
+$('focus').innerHTML='<option value="">Todo el equipo</option>'+PEOPLE.map(p=>`<option>${p[0]}</option>`).join('');
+$('teamnav').innerHTML=PEOPLE.map(p=>`<button class="pbtn" data-v="persona" data-p="${p[0]}"><span class="mini">${p[1]}</span>${p[0]}</button>`).join('');
+function curView(){const c=[...document.querySelectorAll('[data-view]')].find(x=>x.style.display!=='none');return c?c.dataset.view:''}
+function fillKb(){const ps=projsFor();$('kb-proj').innerHTML=ps.map(p=>`<option value="${p.id}">${esc(p.c)} · ${esc(p.p)}</option>`).join('');if(ps.length)renderKanban(ps[0].id);}
+function setFocus(n){focus=n||'';$('focus').value=focus;$('focusbar').classList.toggle('on',!!focus);
+ renderProj($('fcli').value);renderFeed();renderPeople();fillKb();renderBlk();
+ const v=curView();if(v==='persona')renderPersona();
+ document.querySelectorAll('#teamnav button').forEach(b=>{if(v==='persona'&&b.dataset.p===focus)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});}
+$('focus').onchange=e=>setFocus(e.target.value);
+function renderPersona(){
+ const el=$('v-persona');
+ if(!focus){el.innerHTML=`<div class="page-head"><div><p class="label">Equipo</p><h2>¿A quién quieres revisar?</h2></div></div><div class="pgrid">${PEOPLE.map(p=>{const bl=BLK.filter(b=>b.who===p[0]).length;return `<button class="pcard" data-pick="${p[0]}"><span class="avatar" style="grid-row:auto">${p[1]}</span><b>${p[0]}</b><span class="muted" style="font-size:.8rem">${p[2]}/5 días · ${p[3]} cerradas${bl?` · <span style="color:var(--crit)">${bl} bloqueo</span>`:''}</span></button>`}).join('')}</div>`;
+  el.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{setFocus(b.dataset.pick);show('persona')});return;}
+ const P=PEOPLE.find(p=>p[0]===focus);const ps=projsFor();const bl=BLK.filter(b=>b.who===focus);
+ const open=ps.reduce((n,p)=>n+p.acts.filter(a=>a[3]===focus&&a[1]!=='Completado').length,0);
+ el.innerHTML=`<div class="page-head"><div class="phead"><span class="bigav">${P[1]}</span><div><p class="label">Colaborador</p><h2>${esc(focus)}</h2><p class="muted mono" style="font-size:.8rem">${slug(focus)+DOMAIN}</p></div></div>
+  <button class="btn ghost" id="p-ping">Pedir actualización</button></div>
+  <div class="kpis"><div class="kpi"><span class="label">Días con registro</span><b style="${P[2]<5?'color:var(--crit)':''}">${P[2]}/5</b><span class="d muted">Semana 39</span></div>
+  <div class="kpi"><span class="label">Actividades cerradas</span><b>${P[3]}</b><span class="d muted">Esta semana</span></div>
+  <div class="kpi"><span class="label">Actividades abiertas</span><b>${open}</b><span class="d muted">En ${ps.length} proyecto${ps.length===1?'':'s'}</span></div>
+  <div class="kpi"><span class="label">Bloqueos abiertos</span><b style="${bl.length?'color:var(--crit)':''}">${bl.length}</b><span class="d muted">${bl.length?'Más antiguo: '+Math.max(...bl.map(b=>b.days))+' días':'Sin bloqueos'}</span></div></div>
+  <div class="grid-2"><div style="display:grid;gap:16px">${ps.map(p=>`<div class="panel"><div class="panel-head"><div><h3>${esc(p.c)} · ${esc(p.p)}</h3><span class="muted" style="font-size:.8rem">Compromiso ${p.due} · Avance del proyecto ${pctOf(p)}%</span></div><span class="pill ${stC(p.st)}">${p.st}</span></div>
+   <div class="tscroll"><table><thead><tr><th>Actividad</th><th>Estatus</th><th>Avance</th><th>Compromiso</th></tr></thead><tbody>${p.acts.filter(a=>a[3]===focus).map(a=>`<tr><td><b>${esc(a[0])}</b></td><td><div style="display:grid;gap:4px"><span class="pill ${stC(a[1])}" style="justify-self:start">${a[1]}</span>${revPill(a)}</div></td><td><div class="bar"><i><span style="width:${a[2]}%"></span></i><em>${a[2]}%</em></div></td><td class="num">${a[4]}</td></tr>`).join('')}</tbody></table></div></div>`).join('')}</div>
+  <div style="display:grid;gap:16px"><div class="panel"><div class="panel-head"><h3>Bloqueos</h3></div>${bl.length?bl.map(b=>`<div style="display:grid;gap:4px;padding:8px 0;border-top:1px solid var(--line)"><span class="pill s-bloq" style="justify-self:start">${esc(b.t)}</span><b style="font-size:.9rem">${esc(b.a)}</b><span class="muted" style="font-size:.82rem">${esc(b.d)} · ${b.days} días abierto</span></div>`).join(''):'<p class="muted">Sin bloqueos abiertos.</p>'}</div>
+  <div class="panel"><div class="panel-head"><h3>Últimos avances</h3></div>${FEED.some(f=>f[1]===focus)?`<ul class="feed">${FEED.filter(f=>f[1]===focus).map(f=>`<li><span class="avatar">${f[0]}</span><span class="sumline">${esc(f[3])}</span><span class="meta">${f[2]}</span></li>`).join('')}</ul>`:'<p class="muted">Sin avances recientes.</p>'}</div></div></div>`;
+ $('p-ping').onclick=()=>toast('Se envió un recordatorio a '+focus.split(' ')[0]);
+}
+
+/* revisión de completadas */
+const PENDING=['Pruebas de conexión','Dashboard Tableau','Catálogo de clientes'];
+PROJ.forEach(p=>p.acts.forEach(a=>{if(a[1]==='Completado'&&a[8]===undefined)a[8]=!PENDING.includes(a[0])}));
+function revPill(a){return a[1]!=='Completado'?'':(a[8]?'<span class="pill s-ok" style="justify-self:start">Revisada por Jaz</span>':'<span class="pill s-rev" style="justify-self:start">Pendiente de revisión</span>')}
+function pendList(){const r=[];PROJ.forEach(p=>p.acts.forEach(a=>{if(a[1]==='Completado'&&!a[8]&&(!focus||a[3]===focus))r.push({p,a})}));return r}
+function renderReview(){
+ const r=pendList();const all=[];PROJ.forEach(p=>p.acts.forEach(a=>{if(a[1]==='Completado'&&!a[8])all.push(a)}));
+ $('nrev').textContent=all.length;$('nrev').hidden=!all.length;
+ $('trev').innerHTML=r.length?'<table><thead><tr><th>Actividad</th><th>Colaborador</th><th>Inicio → fin</th><th>Descripción</th><th></th></tr></thead><tbody>'+r.map(({p,a})=>`<tr><td><b>${esc(a[0])}</b><br><span class="muted" style="font-size:.8rem">${esc(p.c)} · ${esc(p.p)}</span></td><td>${esc(a[3])}</td><td class="num">${toDM(iniOf(a))} → ${a[4]}</td><td style="max-width:32ch">${esc(a[6]||'Sin descripción')}</td>
+  <td><div class="row" style="flex-wrap:nowrap;gap:6px"><button class="btn sm" data-ok="${p.id}" data-n="${esc(a[0])}" data-w="${esc(a[3])}">Aprobar</button><button class="btn ghost sm" data-back="${p.id}" data-n="${esc(a[0])}" data-w="${esc(a[3])}">Devolver</button></div></td></tr>`).join('')+'</tbody></table>':'<p class="muted">No hay actividades pendientes de revisión.</p>';
+ $('irev').innerHTML=r.length?r.slice(0,4).map(({p,a})=>`<li><span class="sv" style="background:var(--ok)"></span><div><b>${esc(a[0])}</b><p>${esc(a[3])} · ${esc(p.c)}</p></div><button class="btn sm" data-ok="${p.id}" data-n="${esc(a[0])}" data-w="${esc(a[3])}">Aprobar</button></li>`).join(''):'<li style="grid-template-columns:1fr"><p>Sin pendientes.</p></li>';
+}
+document.addEventListener('click',e=>{
+ const ok=e.target.closest('[data-ok]'),bk=e.target.closest('[data-back]');const b=ok||bk;if(!b)return;
+ const p=PROJ.find(x=>x.id==(b.dataset.ok||b.dataset.back));const a=p&&p.acts.find(x=>x[0]===b.dataset.n&&x[3]===b.dataset.w);if(!a)return;
+ if(ok){a[8]=true;toast('Actividad aprobada. '+a[3].split(' ')[0]+' ya lo ve en su inicio.')}
+ else{a[1]='En progreso';a[2]=90;a[8]=undefined;toast('Actividad devuelta a '+a[3].split(' ')[0]+' para ajustes.')}
+ refreshAll();});
+function refreshAll(){renderReview();renderProj($('fcli').value);renderKanban($('kb-proj').value||1);renderBlk();if(role==='dev'){mine();renderMine();renderHome()}if(curView&&curView()==='persona')renderPersona();}
+
+/* inicio del colaborador */
+function renderHome(){if(role!=='dev')return;
+ const ps=PROJ.filter(p=>p.acts.some(a=>a[3]===me));const mineA=[];ps.forEach(p=>p.acts.forEach(a=>{if(a[3]===me)mineA.push(a)}));
+ const open=mineA.filter(a=>a[1]!=='Completado').length,done=mineA.filter(a=>a[1]==='Completado'),pend=done.filter(a=>!a[8]).length,bl=BLK.filter(b=>b.who===me).length;
+ $('dh-kpis').innerHTML=`<div class="kpi"><span class="label">Actividades abiertas</span><b>${open}</b><span class="d muted">En ${ps.length} proyecto${ps.length===1?'':'s'}</span></div>
+  <div class="kpi"><span class="label">Completadas</span><b style="color:var(--ok)">${done.length}</b><span class="d muted">${done.length-pend} revisadas por Jaz</span></div>
+  <div class="kpi"><span class="label">Pendientes de revisión</span><b style="color:var(--warn)">${pend}</b><span class="d muted">Esperando a Jaz</span></div>
+  <div class="kpi"><span class="label">Bloqueos abiertos</span><b style="${bl?'color:var(--crit)':''}">${bl}</b><span class="d muted">${bl?'Revísalos en Mis bloqueos':'Todo en orden'}</span></div>`;
+ $('dh-proj').innerHTML=ps.map(p=>{const my=p.acts.filter(a=>a[3]===me);const d=my.filter(a=>a[1]==='Completado').length;const pc=Math.round(d/my.length*100);
+  return `<div class="panel" style="display:grid;gap:12px"><div class="panel-head" style="margin:0"><div><p class="label">${esc(p.c)}</p><h3>${esc(p.p)}</h3><span class="muted" style="font-size:.8rem">Compromiso del proyecto ${p.due} · Líder ${esc(p.who)}</span></div><span class="pill ${stC(p.st)}">${p.st}</span></div>
+  <div class="field" style="gap:4px"><span style="font-size:.82rem;font-weight:600">Mi avance: ${d} de ${my.length} actividades completadas</span><div class="bar"><i><span style="width:${pc}%;background:var(--ok)"></span></i><em>${pc}%</em></div></div>
+  <div class="tscroll"><table><tbody>${my.map(a=>`<tr><td><b>${esc(a[0])}</b><br><span class="muted" style="font-size:.76rem">${toDM(iniOf(a))} → ${a[4]}</span></td><td><div style="display:grid;gap:4px"><span class="pill ${stC(a[1])}" style="justify-self:start">${a[1]}</span>${revPill(a)}</div></td><td class="num">${a[2]}%</td></tr>`).join('')}</tbody></table></div></div>`}).join('');
+}
+
+document.addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(g)show(g.dataset.go)});
+/* animaciones */
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function countUp(sec){if(RM)return;sec.querySelectorAll('.kpi b').forEach(b=>{if(b.children.length)return;const t=b.textContent.trim();if(!/^\d+$/.test(t))return;const n=+t;if(!n)return;const t0=performance.now();
+ const step=now=>{const k=Math.min(1,(now-t0)/700);b.textContent=Math.round(n*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(step)};requestAnimationFrame(step)})}
+const TILT='.kpi,.pcard,.wdg,.hero .hi,.card,.alert';let tEl=null;
+document.addEventListener('pointermove',e=>{if(RM||e.pointerType==='touch')return;const el=e.target.closest(TILT);if(tEl&&tEl!==el)tEl.style.transform='';tEl=el;if(!el)return;
+ const r=el.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5,m=el.classList.contains('card')?5:7;
+ el.style.transform=`perspective(800px) rotateX(${(-y*m).toFixed(2)}deg) rotateY(${(x*m).toFixed(2)}deg) translateZ(6px)`;});
+document.documentElement.addEventListener('pointerleave',()=>{if(tEl)tEl.style.transform=''});
+function setNav(c){document.querySelector('.app').classList.toggle('collapsed',c);$('navtoggle').setAttribute('aria-expanded',String(!c));$('navtoggle').setAttribute('aria-label',c?'Mostrar menú':'Ocultar menú');try{localStorage.setItem('nexo-nav',c?'1':'0')}catch(e){}}
+$('navtoggle').onclick=()=>setNav(!document.querySelector('.app').classList.contains('collapsed'));
+try{if(localStorage.getItem('nexo-nav')==='1')setNav(true)}catch(e){}
+/* reloj y clima */
+const WX={cdmx:{t:19,c:'Parcialmente nublado',mx:23,mn:12,ll:40,ic:'ps',h:[['15:00',22,'ps'],['18:00',20,'ll'],['21:00',16,'ll'],['00:00',14,'nb']]},
+ mty:{t:31,c:'Soleado',mx:34,mn:22,ll:5,ic:'sol',h:[['15:00',33,'sol'],['18:00',30,'sol'],['21:00',26,'ps'],['00:00',24,'nb']]},
+ gdl:{t:25,c:'Chubascos aislados',mx:28,mn:16,ll:60,ic:'ll',h:[['15:00',26,'ps'],['18:00',23,'ll'],['21:00',20,'ll'],['00:00',18,'nb']]}};
+const ICON={sol:'<circle cx="24" cy="24" r="9" fill="#F2B233"/><g stroke="#F2B233" stroke-width="3" stroke-linecap="round"><path d="M24 5v5M24 38v5M5 24h5M38 24h5M10.5 10.5l3.5 3.5M34 34l3.5 3.5M10.5 37.5l3.5-3.5M34 14l3.5-3.5"/></g>',
+ ps:'<circle cx="18" cy="17" r="8" fill="#F2B233"/><path d="M16 38h20a8 8 0 0 0 0-16 11 11 0 0 0-21 4 6 6 0 0 0 1 12z" fill="#9FB3C8"/>',
+ ll:'<path d="M12 30h24a8 8 0 0 0 0-16 11 11 0 0 0-21 4 6 6 0 0 0-3 12z" fill="#8497AD"/><g stroke="#4A90D9" stroke-width="3" stroke-linecap="round"><path d="M17 35l-2 6M25 35l-2 6M33 35l-2 6"/></g>',
+ nb:'<path d="M12 34h24a8 8 0 0 0 0-16 11 11 0 0 0-21 4 6 6 0 0 0-3 12z" fill="#9FB3C8"/>'};
+function renderWx(){const w=WX[$('wx-city').value];$('wx-ic').innerHTML=ICON[w.ic];$('wx-t').textContent=w.t+'°';$('wx-c').textContent=w.c;$('wx-m').textContent=`Máx ${w.mx}° · Mín ${w.mn}° · Lluvia ${w.ll}%`;
+ $('wx-h').innerHTML=w.h.map(h=>`<div><svg width="22" height="22" viewBox="0 0 48 48" aria-hidden="true">${ICON[h[2]]}</svg><b>${h[1]}°</b>${h[0]}</div>`).join('');}
+$('wx-city').onchange=renderWx;renderWx();
+const TZ='America/Mexico_City';
+function tick(){const d=new Date();
+ const hm=new Intl.DateTimeFormat('es-MX',{timeZone:TZ,hour:'2-digit',minute:'2-digit',hour12:false}).format(d);
+ const sec=String(new Intl.DateTimeFormat('es-MX',{timeZone:TZ,second:'numeric'}).format(d)).padStart(2,'0');
+ $('clk').innerHTML=`${hm}<small>:${sec}</small>`;
+ const fecha=new Intl.DateTimeFormat('es-MX',{timeZone:TZ,weekday:'long',day:'numeric',month:'long'}).format(d);
+ $('hi-date').textContent=fecha.charAt(0).toUpperCase()+fecha.slice(1);
+ const h=+new Intl.DateTimeFormat('en-US',{timeZone:TZ,hour:'numeric',hour12:false}).format(d)%24;
+ if(role==='dev'){const bl=BLK.filter(b=>b.who===me).length;const op=PROJ.reduce((n,p)=>n+p.acts.filter(a=>a[3]===me&&a[1]!=='Completado').length,0);$('hi-greet').textContent='Hola, '+(me||'').split(' ')[0];$('hi-sub').textContent=(h<12?'Buenos días':h<19?'Buenas tardes':'Buenas noches')+`. Tienes ${op} actividades abiertas`+(bl?` y ${bl} bloqueo abierto.`:'.');return}
+ $('hi-greet').textContent='Bienvenida, Jaz';
+ $('hi-sub').textContent=(h<12?'Buenos días':h<19?'Buenas tardes':'Buenas noches')+'. Hay 3 proyectos que requieren tu atención y 5 avances nuevos desde ayer.';}
+tick();setInterval(tick,1000);
+$('logout').onclick=()=>{role=null;$('login').hidden=false;};
+
+renderProj('');renderFeed();renderPeople();renderKanban(1);
+</script>
+
+</body>
+</html>
