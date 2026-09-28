@@ -1,11 +1,9 @@
-<!-- Pantalla de inicio de sesión con los cubos 3D flotando al fondo -->
+<!-- Pantalla de inicio de sesión: tarjeta de vidrio sobre una red neuronal en 3D (estilos en 11-login-red-neuronal.css) -->
 <script>
   import { app, api, entrar } from '$lib/estado.svelte.js';
   import { toast } from '$lib/aviso.svelte.js';
   import Cubo from './Cubo.svelte';
-
-  // [izquierda %, arriba %, retraso s, tamaño px] de cada cubo del fondo
-  const CUBOS = [[8, 14, 0, 70], [80, 10, -2, 46], [14, 72, -4, 52], [84, 66, -1, 84], [46, 86, -3, 36], [60, 4, -5, 28]];
+  import FondoRedNeuronal from './FondoRedNeuronal.svelte';
 
   let email = $state('');
   let password = $state('');
@@ -32,12 +30,10 @@
   }
 </script>
 
-<div class="login" class:checking={app.verificando} id="login" hidden={!!app.S}>
-  <div class="bgcubes" aria-hidden="true">
-    {#each CUBOS as [x, y, retraso, s]}<span class="bgc" style="left:{x}%;top:{y}%;animation-delay:{retraso}s"><Cubo {s} /></span>{/each}
-  </div>
+<div class="login login-red" class:checking={app.verificando} id="login" hidden={!!app.S}>
+  <FondoRedNeuronal activo={!app.S} />
   <div class="box">
-    <div class="brand" style="padding:0"><Cubo s={40} /><div><h2 style="font-size:1.4rem">Nexo</h2><span class="muted" style="font-size:.8rem">Área de Desarrollo de Software</span></div></div>
+    <div class="brand" style="padding:0"><Cubo s={42} /><div><h2 style="font-size:1.6rem">Nexo</h2><span class="muted" style="font-size:.85rem">Área de Desarrollo de Software</span></div></div>
     <div><h3 style="font-size:1.15rem">Inicia sesión</h3><p class="muted" style="font-size:.86rem;margin-top:4px">Usa tu correo de la empresa. Tu rol se asigna automáticamente.</p></div>
     <form id="lgform" novalidate onsubmit={enviar}>
       <div class="field"><label for="lg-mail">Correo de la empresa</label><input type="email" id="lg-mail" inputmode="email" autocomplete="username" placeholder="nombre.apellido@tuempresa.mx" bind:value={email} /></div>

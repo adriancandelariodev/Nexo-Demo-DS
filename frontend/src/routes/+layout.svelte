@@ -10,6 +10,7 @@
   import '../styles/08-tablero.css';
   import '../styles/09-ventanas.css';
   import '../styles/10-responsive.css';
+  import '../styles/11-login-red-neuronal.css';
 
   let { children } = $props();
 </script>
