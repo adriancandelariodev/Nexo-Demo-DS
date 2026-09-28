@@ -1,12 +1,13 @@
-// Servidor local que imita a Vercel: sirve /public y ejecuta las funciones de /api.
-// Uso: npm run dev  (lee las variables de .env)
-import 'dotenv/config';
+// Servidor local del backend que imita a Vercel: ejecuta las funciones de /api (puerto 3001).
+// Uso: npm run dev  (lee las variables de backend/.env)
+import dotenv from 'dotenv';
 import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+dotenv.config({ path: path.join(root, '.env'), quiet: true });
 const publicDir = path.join(root, 'public');
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -65,5 +66,5 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-const port = Number(process.env.PORT) || 3000;
-server.listen(port, () => console.log(`Nexo corriendo en http://localhost:${port}`));
+const port = Number(process.env.API_PORT) || 3001;
+server.listen(port, () => console.log(`Backend (API) en http://localhost:${port}`));

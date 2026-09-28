@@ -1,6 +1,8 @@
 // Crea (o restablece) una cuenta de líder.
 // Uso: npm run crear-lider -- "Nombre" correo@empresa.mx "contraseña-de-8-o-más"
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'node:url';
+dotenv.config({ path: fileURLToPath(new URL('../.env', import.meta.url)), quiet: true });
 import bcrypt from 'bcryptjs';
 import pg from 'pg';
 

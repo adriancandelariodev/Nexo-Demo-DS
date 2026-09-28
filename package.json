@@ -1,24 +1,14 @@
 {
-  "name": "nexo-desarrollo",
+  "name": "nexo",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Nexo: seguimiento de actividades del área de Desarrollo de Software",
+  "description": "Nexo: frontend/ (pantalla) y backend/ (API + base de datos). Cada carpeta se despliega como un proyecto de Vercel.",
   "scripts": {
-    "dev": "node scripts/dev-server.js",
-    "db:setup": "node scripts/db-setup.js",
-    "db:demo": "node scripts/db-setup.js --demo",
-    "crear-lider": "node scripts/crear-lider.js"
+    "dev": "node dev.js",
+    "instalar": "npm install --prefix backend"
   },
   "engines": {
     "node": ">=20"
-  },
-  "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "jose": "^5.9.6",
-    "pg": "^8.13.1"
-  },
-  "devDependencies": {
-    "dotenv": "^16.4.7"
   }
 }

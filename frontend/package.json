@@ -1,0 +1,13 @@
+{
+  "name": "nexo-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Nexo · frontend: HTML, CSS y JavaScript sin framework. Llama al backend en /api.",
+  "scripts": {
+    "dev": "node servidor-local.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

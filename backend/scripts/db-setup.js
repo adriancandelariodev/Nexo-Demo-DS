@@ -1,6 +1,8 @@
 // Crea las tablas y, con --demo, carga los datos de ejemplo.
 // Uso: npm run db:setup   ·   npm run db:demo
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'node:url';
+dotenv.config({ path: fileURLToPath(new URL('../.env', import.meta.url)), quiet: true });
 import fs from 'node:fs/promises';
 import pg from 'pg';
 
