@@ -6,7 +6,7 @@
   "description": "Nexo: frontend/ (pantalla) y backend/ (API + base de datos). Cada carpeta se despliega como un proyecto de Vercel.",
   "scripts": {
     "dev": "node dev.js",
-    "instalar": "npm install --prefix backend"
+    "instalar": "npm install --prefix backend && npm install --prefix frontend"
   },
   "engines": {
     "node": ">=20"

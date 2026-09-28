@@ -1,0 +1,20 @@
+/* logo 3D */
+.logo3d{--s:30px;width:var(--s);height:var(--s);perspective:calc(var(--s)*5);flex:none;display:inline-block}
+.cube{position:relative;display:block;width:100%;height:100%;transform-style:preserve-3d;animation:cubespin 12s linear infinite}
+.cube i{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;font-family:var(--mono);font-weight:700;font-size:calc(var(--s)*.3);color:#fff;border-radius:calc(var(--s)*.16);border:1px solid rgba(255,255,255,.35);backface-visibility:visible}
+.cube .f1{background:linear-gradient(135deg,#2B59C3,#2FA7C9);transform:translateZ(calc(var(--s)/2))}
+.cube .f2{background:linear-gradient(135deg,#2FA7C9,#2B59C3);transform:rotateY(180deg) translateZ(calc(var(--s)/2))}
+.cube .f3{background:linear-gradient(135deg,#2449A3,#2B8FB0);transform:rotateY(90deg) translateZ(calc(var(--s)/2))}
+.cube .f4{background:linear-gradient(135deg,#2B8FB0,#2449A3);transform:rotateY(-90deg) translateZ(calc(var(--s)/2))}
+.cube .f5{background:linear-gradient(135deg,#4F7FE6,#43C0DD);transform:rotateX(90deg) translateZ(calc(var(--s)/2))}
+.cube .f6{background:#1C3A82;transform:rotateX(-90deg) translateZ(calc(var(--s)/2))}
+@keyframes cubespin{from{transform:rotateX(-24deg) rotateY(0deg)}to{transform:rotateX(-24deg) rotateY(360deg)}}
+.brand:hover .cube{animation-duration:2.5s}
+.brand .logo3d{margin:4px 6px 4px 2px}
+/* login 3D */
+.bgcubes{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+.bgc{position:absolute;opacity:.28;animation:floaty 9s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-22px) rotate(8deg)}}
+.login .box{position:relative;z-index:1;animation:pop3d .7s cubic-bezier(.2,.8,.2,1) both;box-shadow:0 24px 60px -20px rgba(20,40,90,.35)}
+.login.checking .box{visibility:hidden}
+@keyframes pop3d{from{transform:perspective(900px) rotateX(14deg) translateY(24px) scale(.97);opacity:.2}to{transform:none;opacity:1}}

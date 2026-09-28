@@ -9,10 +9,17 @@ Aplicación web para dar seguimiento a las actividades del equipo de desarrollo.
 ## Estructura: frontend y backend separados
 
 ```
-frontend/                 → la pantalla (se despliega como un proyecto de Vercel)
-  public/                   index.html · styles.css · app.js
-  vercel.json               reenvía /api/* al backend
-  servidor-local.js         servidor de desarrollo (puerto 3000)
+frontend/                 → la pantalla en SvelteKit (se despliega como un proyecto de Vercel)
+  src/routes/+page.svelte   estructura general: menú, barra superior, vista actual y ventanas
+  src/lib/vistas/           una pantalla por archivo: PanelGeneral, Proyectos, Revisar, Bloqueos,
+                            Persona, Admin, MiInicio, MisActividades, MisBloqueos
+  src/lib/componentes/      piezas reutilizables: Login, Menu, Hero, Kanban, Tarjeta,
+                            VentanaActividad, VentanaMensaje, EditorEnlaces, Cubo (logo 3D)…
+  src/lib/estado.svelte.js  sesión, datos del backend, permisos por rol y actualización automática
+  src/lib/efectos.js        inclinación 3D al pasar el mouse y contadores animados
+  src/styles/               estilos por sección (base, animaciones 3D, menú, panel, tablero, ventanas…)
+  vite.config.js            servidor de desarrollo (puerto 3000) que reenvía /api al backend
+  vercel.json               compila con Vite y reenvía /api/* al backend en producción
 
 backend/                  → la API y la base de datos (otro proyecto de Vercel)
   api/                      auth · estado · actividades · bloqueos · revision · recordatorios · admin
@@ -28,12 +35,12 @@ dev.js                    → levanta los dos en tu computadora con un solo coma
 
 | Parte | Tecnología |
 |---|---|
-| Frontend | HTML + CSS + JavaScript sin framework |
+| Frontend | SvelteKit (Svelte 5) compilado como app estática de una sola página |
 | Backend | Funciones serverless de Vercel en Node.js |
 | Base de datos | PostgreSQL (Neon) |
 | Sesión | Cookie `HttpOnly` con JWT firmado (`jose`), contraseñas con bcrypt |
 
-**Cómo se comunican:** el frontend siempre llama a `/api/...` en su propio dominio. En Vercel, la regla `rewrites` de `frontend/vercel.json` reenvía esas llamadas al backend; en local lo hace `servidor-local.js`. Para el navegador es un solo sitio, así que la cookie de sesión funciona sin configurar CORS.
+**Cómo se comunican:** el frontend siempre llama a `/api/...` en su propio dominio. En Vercel, la regla `rewrites` de `frontend/vercel.json` reenvía esas llamadas al backend; en local lo hace el `proxy` de `vite.config.js`. Para el navegador es un solo sitio, así que la cookie de sesión funciona sin configurar CORS.
 
 Los permisos se validan en el backend: un colaborador solo recibe y modifica sus propios datos, aunque llame a la API directamente.
 
@@ -44,7 +51,7 @@ Los permisos se validan en el backend: un colaborador solo recibe y modifica sus
 Requiere Node.js 20 o superior (`winget install OpenJS.NodeJS.LTS`).
 
 ```powershell
-npm run instalar                         # instala las dependencias del backend
+npm run instalar                         # instala las dependencias del backend y del frontend
 copy backend\.env.example backend\.env   # y edita DATABASE_URL (Neon) y AUTH_SECRET
 npm run --prefix backend db:setup        # crea las tablas  (db:demo para incluir datos de ejemplo)
 npm run dev                              # frontend http://localhost:3000 · backend http://localhost:3001
@@ -70,8 +77,11 @@ Otros comandos del backend (ejecutar dentro de `backend/`):
 
 ### Frontend (pantalla)
 1. En el proyecto del frontend: **Settings → Build and Deployment → Root Directory:** `frontend` → **Save**.
-2. Este proyecto no necesita variables ni base de datos. Puedes desconectar Neon y quitar `DATABASE_URL` y `AUTH_SECRET`.
-3. **Redeploy** y abre su dirección. Todo funciona igual que antes.
+2. *Framework Preset:* **Other**. `vercel.json` ya indica cómo compilar (`npm run build`) y la carpeta de salida (`build`).
+3. Este proyecto no necesita variables ni base de datos. Puedes desconectar Neon y quitar `DATABASE_URL` y `AUTH_SECRET`.
+4. **Redeploy** y abre su dirección.
+
+Para probar la versión compilada en tu computadora: `npm run build --prefix frontend` y luego `npm run preview --prefix frontend` (con el backend encendido).
 
 Para generar `AUTH_SECRET` en Windows (PowerShell):
 

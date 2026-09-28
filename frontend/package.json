@@ -1,13 +1,22 @@
 {
   "name": "nexo-frontend",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "Nexo · frontend: HTML, CSS y JavaScript sin framework. Llama al backend en /api.",
+  "description": "Nexo · frontend en SvelteKit (app de una sola página). Llama al backend en /api.",
   "scripts": {
-    "dev": "node servidor-local.js"
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-static": "^3.0.10",
+    "@sveltejs/kit": "^2.70.3",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "svelte": "^5.57.1",
+    "vite": "^8.3.1"
   }
 }

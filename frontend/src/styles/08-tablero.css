@@ -1,0 +1,37 @@
+/* kanban */
+.kanban{display:grid;grid-template-columns:repeat(4,minmax(200px,1fr));gap:12px;min-width:840px}
+.col{background:var(--surface-2);border-radius:10px;padding:10px;display:grid;gap:8px;align-content:start}
+.col h3{font-size:.84rem;display:flex;justify-content:space-between;padding:2px 4px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;display:grid;gap:6px;font-size:.85rem}
+.card.bl{border-left:3px solid var(--crit)}
+.cardbtn{font:inherit;text-align:left;color:var(--ink);cursor:pointer;width:100%}
+.cardbtn:hover{border-color:var(--accent)}
+.cardbtn .edl{color:var(--accent);font-weight:600}
+.editbar{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--accent-soft);color:var(--accent);padding:8px 12px;border-radius:8px;font-size:.86rem;font-weight:600}
+.card .ft{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:.74rem;color:var(--muted)}
+.card .over{color:var(--crit);font-weight:600}
+
+/* tarjetas estilo tablero */
+.kanban{grid-template-columns:repeat(4,minmax(230px,1fr));min-width:960px;align-items:start}
+.col h3 .ct{display:inline-flex;align-items:center;gap:8px}
+.coldot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.tcard{font:inherit;text-align:left;color:var(--ink);width:100%;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:8px;cursor:pointer;box-shadow:0 1px 2px rgba(10,20,40,.08);transition:border-color .15s,box-shadow .2s,transform .15s}
+.tcard:hover{border-color:var(--accent);box-shadow:0 10px 22px -14px rgba(20,40,90,.55);transform:translateY(-1px)}
+.tlabels{display:flex;gap:4px}
+.tlabels i{width:40px;height:8px;border-radius:4px;display:block}
+.tcli{font-size:.66rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;margin-bottom:-4px}
+.ttitle{font-weight:600;font-size:.92rem;line-height:1.35;display:flex;gap:6px;align-items:flex-start}
+.ttitle .chk{color:var(--ok);flex:none;margin-top:1px;display:inline-flex}
+.tfoot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.76rem;color:var(--muted);min-height:26px}
+.tfoot>span{display:inline-flex;align-items:center;gap:4px}
+.chip{padding:1px 6px;border-radius:4px;font-weight:600}
+.chip.over{background:var(--crit);color:#fff}
+.chip.done{background:var(--ok);color:#fff}
+.av,.tfoot>span.av{width:26px;height:26px;border-radius:50%;display:inline-grid;place-items:center;justify-content:center;font-size:.64rem;font-weight:700;color:#fff;flex:none;letter-spacing:.02em}
+.tfoot .av{margin-left:auto}
+.col-add{font:inherit;display:flex;align-items:center;gap:8px;width:100%;background:none;border:0;border-radius:8px;padding:8px 10px;color:var(--muted);cursor:pointer;font-weight:600;font-size:.86rem;text-align:left}
+.col-add:hover{background:var(--surface);color:var(--ink)}
+.leyenda{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.78rem;color:var(--muted)}
+.leyenda span{display:inline-flex;align-items:center;gap:6px}
+.leyenda i{width:22px;height:6px;border-radius:3px;display:inline-block}
+
