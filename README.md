@@ -3,7 +3,8 @@
 Aplicación web para dar seguimiento a las actividades del equipo de desarrollo. Está basada en la demo `nexo-desarrollo.html`.
 
 - **Líder:** panel general con KPIs, alertas automáticas, avance por proyecto, tablero, bloqueos, revisión de actividades completadas, vista por persona y administración de proyectos y cuentas.
-- **Colaborador:** registra y edita sus actividades, reporta y resuelve bloqueos, agrega entregables (Drive, Excel, Miro) y ve los avisos de su líder.
+- **Sublíder:** registra sus propias actividades como un colaborador y, además, supervisa a los colaboradores que la líder le asigna. Ve su panel, tableros y bloqueos, y puede aprobar, devolver y pedir actualizaciones. No entra a Administración. Sus propias actividades las revisa la líder.
+- **Colaborador:** registra y edita sus actividades, reporta y resuelve bloqueos, agrega entregables (Drive, Excel, Miro) y ve los avisos de su líder o sublíder.
 
 ## Stack
 

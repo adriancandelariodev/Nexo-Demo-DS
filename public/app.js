@@ -14,8 +14,11 @@ const toDM = iso => { if (!iso) return '—'; const [, m, d] = String(iso).slice
 const plural = (n, uno, varios) => (n === 1 ? uno : varios);
 const corto = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return 'enlace'; } };
 
-const HOME = { lider: 'inicio', dev: 'dinicio' };
-const ALLOWED = { lider: ['inicio', 'proyectos', 'revisar', 'bloqueos', 'persona', 'admin'], dev: ['dinicio', 'registrar', 'misact', 'misblk'] };
+const HOME = { lider: 'inicio', sublider: 'inicio', dev: 'dinicio' };
+const VISTAS_EQUIPO = ['inicio', 'proyectos', 'revisar', 'bloqueos', 'persona'];
+const VISTAS_MIAS = ['dinicio', 'misact', 'misblk'];
+const ALLOWED = { lider: [...VISTAS_EQUIPO, 'admin'], sublider: [...VISTAS_EQUIPO, ...VISTAS_MIAS], dev: VISTAS_MIAS };
+const ROL_LBL = { lider: 'Líder del equipo', sublider: 'Sublíder', dev: 'Colaborador' };
 
 let S = null;      // estado que devuelve /api/estado
 let role = null;
@@ -45,6 +48,9 @@ async function api(url, opt = {}) {
 
 function toast(m) {
   const t = $('toast');
+  // Con una ventana abierta, el aviso va dentro de la de más arriba para quedar por encima del fondo oscuro.
+  const arriba = ['msg', 'dlg'].map($).find(d => d && d.open);
+  (arriba || document.body).append(t);
   t.textContent = m;
   t.hidden = false;
   clearTimeout(toast.h);
@@ -70,9 +76,38 @@ async function cargar() {
   renderAll();
 }
 
+// Actualización automática: cada 30 s con la pestaña visible, y al volver a ella.
+const REFRESCO_MS = 30_000;
+let refrescando = false;
+async function refrescar() {
+  if (!role || !S || refrescando || document.hidden) return;
+  refrescando = true;
+  $('ppl-upd').classList.add('sync');
+  try {
+    await cargar();
+  } catch {
+    /* se reintenta en el siguiente ciclo */
+  } finally {
+    refrescando = false;
+    $('ppl-upd').classList.remove('sync');
+  }
+}
+setInterval(refrescar, REFRESCO_MS);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refrescar(); });
+
 /* ---------- consultas sobre el estado ---------- */
 const P = id => S.proyectos.find(p => p.id === +id);
-const actsDe = pid => S.actividades.filter(a => a.proyecto_id === pid);
+// Alcance según rol: "equipo" = lo que supervisa (líder: todo; sublíder: su equipo) · "mío" = lo que registra
+const supervisaR = () => role === 'lider' || role === 'sublider';
+const registraR = () => role === 'dev' || role === 'sublider';
+const esMia = x => !!me && x.responsable_id === me.id;
+const AE = () => (role === 'lider' ? S.actividades : S.actividades.filter(a => !esMia(a)));
+const BE = () => (role === 'lider' ? S.bloqueos : S.bloqueos.filter(b => !esMia(b)));
+const FE = () => (role === 'lider' ? S.feed : S.feed.filter(f => f.usuario_id !== me.id));
+const AM = () => S.actividades.filter(esMia);
+const BM = () => S.bloqueos.filter(esMia);
+const misProyectos = () => S.proyectos.filter(p => p.soy_miembro || AM().some(a => a.proyecto_id === p.id));
+const actsDe = pid => AE().filter(a => a.proyecto_id === pid);
 const vencida = a => a.estatus !== 'Completado' && a.fecha_vencimiento && a.fecha_vencimiento < S.hoy;
 const persona = id => (S.personas || []).find(p => p.id === +id);
 const linkChips = ls => ls.map(l => `<a class="lk" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" title="${esc(l.titulo || l.url)}">${esc(TIPO_LBL[l.tipo] || l.tipo)}</a>`).join('');
@@ -96,11 +131,11 @@ const resumen = f => `${f.cliente.toUpperCase()} · ${f.titulo} | ${f.avance_pct
 const nombreLider = () => (S && S.lider) || 'tu líder';
 
 /* ---------- líder: panel general ---------- */
-const projsFor = () => S.proyectos.filter(p => !focus || S.actividades.some(a => a.proyecto_id === p.id && a.responsable_id === focus));
+const projsFor = () => S.proyectos.filter(p => (role === 'lider' || p.del_equipo) && (!focus || AE().some(a => a.proyecto_id === p.id && a.responsable_id === focus)));
 
 function fillCli() {
   const cur = $('fcli').value;
-  const cs = [...new Set(S.proyectos.map(p => p.cliente))].sort((a, b) => a.localeCompare(b, 'es'));
+  const cs = [...new Set(projsFor().map(p => p.cliente))].sort((a, b) => a.localeCompare(b, 'es'));
   $('fcli').innerHTML = '<option value="">Todos los clientes</option>' + cs.map(c => `<option>${esc(c)}</option>`).join('');
   if (cs.includes(cur)) $('fcli').value = cur;
 }
@@ -118,13 +153,13 @@ function renderProj() {
 }
 
 function renderFeed() {
-  const it = S.feed.filter(x => !focus || x.usuario_id === focus).slice(0, 8);
+  const it = FE().filter(x => !focus || x.usuario_id === focus).slice(0, 8);
   $('feed').innerHTML = it.length
     ? it.map(f => `<li><span class="avatar">${esc(initials(f.usuario))}</span><span class="sumline">${esc(resumen(f))}</span><span class="meta"><b style="color:var(--ink)">${esc(f.usuario)}</b> · ${hora(f.creado_en)}</span></li>`).join('')
     : '<li style="grid-template-columns:1fr"><p class="muted">Sin avances registrados.</p></li>';
 }
 
-const clientesDe = uid => [...new Set(S.proyectos.filter(x => x.miembros.includes(uid) || S.actividades.some(a => a.proyecto_id === x.id && a.responsable_id === uid)).map(x => x.cliente))];
+const clientesDe = uid => [...new Set(S.proyectos.filter(x => x.miembros.includes(uid) || AE().some(a => a.proyecto_id === x.id && a.responsable_id === uid)).map(x => x.cliente))];
 
 function renderPeople() {
   const ps = S.personas.filter(p => !focus || p.id === focus);
@@ -134,13 +169,19 @@ function renderPeople() {
       ps.map(p => `<tr><td><b>${esc(p.nombre)}</b></td><td class="num" style="${p.dias < hab ? 'color:var(--crit)' : ''}">${p.dias}/${hab}</td><td class="num">${p.cerradas}</td><td class="num">${p.bloqueos}</td><td>${esc(clientesDe(p.id).join(', '))}</td></tr>`).join('') +
       '</tbody></table>'
     : '<p class="muted">Aún no hay colaboradores. Crea sus cuentas desde Administración.</p>';
+  const hms = new Intl.DateTimeFormat('es-MX', { timeZone: TZ, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date());
+  $('ppl-upd').textContent = `Lun–Vie · actualizado ${hms}`;
 }
 
-function rangoSemana() {
-  const [y, m1, d1] = S.semana.ini.split('-');
-  const [, m2, d2] = S.semana.fin.split('-');
-  return m1 === m2 ? `${+d1} al ${+d2} ${MESES[+m2 - 1]} ${y}` : `${+d1} ${MESES[+m1 - 1]} al ${+d2} ${MESES[+m2 - 1]} ${y}`;
+// "21 al 27 sep 2026" · "28 sep al 4 oct 2026" · "28 dic 2026 al 3 ene 2027"
+function rangoFechas(ini, fin) {
+  const [y1, m1, d1] = ini.split('-').map(Number);
+  const [y2, m2, d2] = fin.split('-').map(Number);
+  if (y1 !== y2) return `${d1} ${MESES[m1 - 1]} ${y1} al ${d2} ${MESES[m2 - 1]} ${y2}`;
+  if (m1 !== m2) return `${d1} ${MESES[m1 - 1]} al ${d2} ${MESES[m2 - 1]} ${y2}`;
+  return `${d1} al ${d2} ${MESES[m2 - 1]} ${y2}`;
 }
+const rangoSemana = () => rangoFechas(S.semana.ini, S.semana.fin);
 
 function renderKpis() {
   const k = S.kpis;
@@ -152,9 +193,10 @@ function renderKpis() {
   const dif = k.cerradas - k.cerradas_prev;
   $('k-ce-d').textContent = `${dif >= 0 ? '+' : ''}${dif} vs semana ${k.semana_prev}`;
   $('k-ce-d').style.color = dif > 0 ? 'var(--ok)' : dif < 0 ? 'var(--crit)' : '';
-  $('k-bl').textContent = S.bloqueos.length;
-  $('k-bl-d').textContent = S.bloqueos.length ? `Más antiguo: ${Math.max(...S.bloqueos.map(b => b.dias))} días` : 'Sin bloqueos';
-  const venc = S.actividades.filter(vencida);
+  const bl = BE();
+  $('k-bl').textContent = bl.length;
+  $('k-bl-d').textContent = bl.length ? `Más antiguo: ${Math.max(...bl.map(b => b.dias))} días` : 'Sin bloqueos';
+  const venc = AE().filter(vencida);
   $('k-ve').textContent = venc.length;
   $('k-ve-d').textContent = venc.length ? [...new Set(venc.map(a => (P(a.proyecto_id) || {}).cliente))].join(', ') : 'Todo al día';
   $('res-media').innerHTML = k.resolucion_dias == null
@@ -174,19 +216,22 @@ function blkTable(list, modo) {
   const dev = modo === 'resolver';
   return '<table><thead><tr><th>Proyecto / actividad</th><th>Tipo</th><th>Descripción</th><th>Lo destraba</th>' + (dev ? '' : '<th>Responsable</th>') + '<th>Días abierto</th><th></th></tr></thead><tbody>' +
     list.map(b => `<tr><td><b>${esc(b.cliente)}</b><br><span class="muted" style="font-size:.8rem">${esc(b.actividad)}</span></td><td><span class="pill s-bloq">${esc(b.tipo)}</span></td><td>${esc(b.descripcion)}</td><td>${esc(b.responsable_externo || '—')}</td>${dev ? '' : `<td>${esc(b.responsable)}</td>`}
-    <td class="num" style="${b.dias >= 5 ? 'color:var(--crit);font-weight:600' : ''}">${b.dias}</td><td>${dev ? `<button class="btn sm" data-r="${b.id}">Marcar resuelto</button>` : `<button class="btn ghost sm" data-ping="${b.responsable_id}">Pedir actualización</button>`}</td></tr>`).join('') +
+    <td class="num" style="${b.dias >= 5 ? 'color:var(--crit);font-weight:600' : ''}">${b.dias}</td><td>${dev ? `<button class="btn sm" data-r="${b.id}">Marcar resuelto</button>` : `<button class="btn ghost sm" data-ping="${b.responsable_id}" data-act="${b.actividad_id}">Pedir actualización</button>`}</td></tr>`).join('') +
     '</tbody></table>';
 }
 
 function renderBlk() {
-  if (role === 'lider') {
-    $('tblk').innerHTML = blkTable(S.bloqueos.filter(b => !focus || b.responsable_id === focus), 'ping');
-    $('nblk').textContent = S.bloqueos.length;
-    $('nblk').hidden = !S.bloqueos.length;
-  } else {
-    $('tmblk').innerHTML = blkTable(S.bloqueos, 'resolver');
-    $('nmblk').textContent = S.bloqueos.length;
-    $('nmblk').hidden = !S.bloqueos.length;
+  if (supervisaR()) {
+    const be = BE();
+    $('tblk').innerHTML = blkTable(be.filter(b => !focus || b.responsable_id === focus), 'ping');
+    $('nblk').textContent = be.length;
+    $('nblk').hidden = !be.length;
+  }
+  if (registraR()) {
+    const bm = BM();
+    $('tmblk').innerHTML = blkTable(bm, 'resolver');
+    $('nmblk').textContent = bm.length;
+    $('nmblk').hidden = !bm.length;
   }
 }
 
@@ -201,10 +246,7 @@ function renderKanban(id) {
   }
   $('kb-title').textContent = `${p.cliente} · ${p.nombre}`;
   $('kb-meta').innerHTML = `<span class="pill ${stC(p.estatus)}">${p.estatus}</span><span class="muted" style="font-size:.86rem">Avance ${p.pct}% · Compromiso ${toDM(p.fecha_compromiso)} · Responsable ${esc(p.responsable || '—')}</span><div class="links">${linkChips(projLinks(p))}</div>`;
-  $('kanban').innerHTML = COLS.map(c => {
-    const it = actsDe(p.id).filter(a => a.estatus === c && (!focus || a.responsable_id === focus));
-    return `<div class="col"><h3>${c}<span class="mono muted">${it.length}</span></h3>${it.map(a => `<div class="card ${c === 'Bloqueado' ? 'bl' : ''}"><b>${esc(a.titulo)}</b>${barMini(a)}${revPill(a)}<div class="ft"><span>${esc(a.responsable)}</span><span class="${vencida(a) ? 'over' : ''}">${toDM(a.fecha_vencimiento)}</span></div></div>`).join('') || '<p class="muted" style="font-size:.8rem;padding:4px">Sin actividades</p>'}</div>`;
-  }).join('');
+  $('kanban').innerHTML = columnas(actsDe(p.id).filter(a => !focus || a.responsable_id === focus), { agregar: false, conCliente: false });
 }
 
 function fillKb() {
@@ -218,18 +260,18 @@ function fillKb() {
 
 /* ---------- líder: revisión ---------- */
 function renderReview() {
-  const todas = S.actividades.filter(a => a.estatus === 'Completado' && !a.revisada);
+  const todas = AE().filter(a => a.estatus === 'Completado' && !a.revisada);
   $('nrev').textContent = todas.length;
   $('nrev').hidden = !todas.length;
   const r = todas.filter(a => !focus || a.responsable_id === focus);
   $('trev').innerHTML = r.length
     ? '<table><thead><tr><th>Actividad</th><th>Colaborador</th><th>Inicio → fin</th><th>Descripción</th><th></th></tr></thead><tbody>' +
-      r.map(a => { const p = P(a.proyecto_id) || {}; return `<tr><td><b>${esc(a.titulo)}</b><br><span class="muted" style="font-size:.8rem">${esc(p.cliente)} · ${esc(p.nombre)}</span></td><td>${esc(a.responsable)}</td><td class="num">${toDM(a.fecha_inicio)} → ${toDM(a.fecha_vencimiento)}</td><td style="max-width:32ch">${esc(a.descripcion || 'Sin descripción')}${a.enlaces.length ? `<div class="links" style="margin-top:4px">${linkChips(a.enlaces)}</div>` : ''}</td>
-      <td><div class="row" style="flex-wrap:nowrap;gap:6px"><button class="btn sm" data-ok="${a.id}">Aprobar</button><button class="btn ghost sm" data-back="${a.id}">Devolver</button></div></td></tr>`; }).join('') +
+      r.map(a => { const p = P(a.proyecto_id) || {}; return `<tr><td><button type="button" class="linkbtn" data-card="${a.id}" title="Ver lo que realizó"><b>${esc(a.titulo)}</b></button><br><span class="muted" style="font-size:.8rem">${esc(p.cliente)} · ${esc(p.nombre)}</span></td><td>${esc(a.responsable)}</td><td class="num">${toDM(a.fecha_inicio)} → ${toDM(a.fecha_vencimiento)}</td><td style="max-width:32ch">${esc(a.descripcion || 'Sin descripción')}${a.enlaces.length ? `<div class="links" style="margin-top:4px">${linkChips(a.enlaces)}</div>` : ''}</td>
+      <td><div class="row" style="flex-wrap:nowrap;gap:6px"><button class="btn ghost sm" data-card="${a.id}">Ver</button><button class="btn sm" data-ok="${a.id}">Aprobar</button><button class="btn ghost sm danger" data-back="${a.id}">Devolver</button></div></td></tr>`; }).join('') +
       '</tbody></table>'
     : '<p class="muted">No hay actividades pendientes de revisión.</p>';
   $('irev').innerHTML = r.length
-    ? r.slice(0, 4).map(a => `<li><span class="sv" style="background:var(--ok)"></span><div><b>${esc(a.titulo)}</b><p>${esc(a.responsable)} · ${esc((P(a.proyecto_id) || {}).cliente)}</p></div><button class="btn sm" data-ok="${a.id}">Aprobar</button></li>`).join('')
+    ? r.slice(0, 4).map(a => `<li><span class="sv" style="background:var(--ok)"></span><div><button type="button" class="linkbtn" data-card="${a.id}"><b>${esc(a.titulo)}</b></button><p>${esc(a.responsable)} · ${esc((P(a.proyecto_id) || {}).cliente)}</p></div><button class="btn sm" data-ok="${a.id}">Aprobar</button></li>`).join('')
     : '<li style="grid-template-columns:1fr"><p>Sin pendientes.</p></li>';
 }
 
@@ -274,9 +316,9 @@ function renderPersona() {
         : '<p class="muted">Aún no hay colaboradores.</p>');
     return;
   }
-  const acts = S.actividades.filter(a => a.responsable_id === focus);
+  const acts = AE().filter(a => a.responsable_id === focus);
   const ps = S.proyectos.filter(p => acts.some(a => a.proyecto_id === p.id));
-  const bl = S.bloqueos.filter(b => b.responsable_id === focus);
+  const bl = BE().filter(b => b.responsable_id === focus);
   const open = acts.filter(a => a.estatus !== 'Completado').length;
   const feed = S.feed.filter(f => f.usuario_id === focus).slice(0, 8);
   const hab = S.semana.habiles;
@@ -329,7 +371,7 @@ let UF = null;
 const PL = LinkBox('pf');
 
 function renderMbr() {
-  const devs = S.usuarios.filter(u => u.rol === 'dev' && (u.activo || PF.miembros.has(u.id)));
+  const devs = S.usuarios.filter(u => (u.rol === 'dev' || u.rol === 'sublider') && (u.activo || PF.miembros.has(u.id)));
   $('pf-mbr').innerHTML = devs.length
     ? devs.map(u => `<label><input type="checkbox" value="${u.id}" ${PF.miembros.has(u.id) ? 'checked' : ''}>${esc(u.nombre)}</label>`).join('')
     : '<span class="muted" style="font-size:.84rem">Primero crea cuentas de colaboradores.</span>';
@@ -365,8 +407,27 @@ function pfEdit(id) {
   $('pf').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+// Equipo del sublíder que se está creando o editando
+let UE = new Set();
+function renderEq() {
+  const nombre = id => (S.usuarios.find(x => x.id === id) || {}).nombre;
+  const devs = S.usuarios.filter(u => u.rol === 'dev' && (u.activo || UE.has(u.id)));
+  $('uf-eq').innerHTML = devs.length
+    ? devs.map(u => `<label><input type="checkbox" value="${u.id}" ${UE.has(u.id) ? 'checked' : ''}>${esc(u.nombre)}${u.sublider_id && u.sublider_id !== UF ? `<span class="muted" style="font-weight:500">&nbsp;· con ${esc(nombre(u.sublider_id))}</span>` : ''}</label>`).join('')
+    : '<span class="muted" style="font-size:.84rem">Aún no hay colaboradores.</span>';
+  $('uf-eqwrap').hidden = $('uf-rol').value !== 'sublider';
+}
+$('uf-rol').onchange = renderEq;
+$('uf-eq').addEventListener('change', e => {
+  const c = e.target;
+  if (c.type !== 'checkbox') return;
+  if (c.checked) UE.add(+c.value);
+  else UE.delete(+c.value);
+});
+
 function ufReset() {
   UF = null;
+  UE = new Set();
   ['uf-nom', 'uf-mail', 'uf-pass'].forEach(i => ($(i).value = ''));
   $('uf-mail').disabled = false;
   $('uf-rol').value = 'dev';
@@ -377,12 +438,14 @@ function ufReset() {
   $('uf-pass-l').textContent = 'Contraseña inicial';
   $('uf-pass-h').textContent = 'Mínimo 8 caracteres. Compártela por un canal seguro.';
   $('uf-new').hidden = true;
+  renderEq();
 }
 
 function ufEdit(id) {
   const u = S.usuarios.find(x => x.id === +id);
   if (!u) return;
   UF = u.id;
+  UE = new Set(S.usuarios.filter(x => x.sublider_id === u.id).map(x => x.id));
   $('uf-nom').value = u.nombre;
   $('uf-mail').value = u.email;
   $('uf-mail').disabled = true;
@@ -395,6 +458,7 @@ function ufEdit(id) {
   $('uf-pass-l').textContent = 'Nueva contraseña';
   $('uf-pass-h').textContent = 'Déjala vacía para no cambiarla.';
   $('uf-new').hidden = false;
+  renderEq();
   $('uf').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -411,8 +475,15 @@ function renderAdmin() {
     ? '<table><thead><tr><th>Proyecto</th><th>Responsable</th><th>Equipo</th><th>Compromiso</th><th></th></tr></thead><tbody>' + filas.join('') + '</tbody></table>'
     : '<p class="muted">Aún no hay proyectos.</p>';
 
-  $('adm-usr').innerHTML = '<table><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr></thead><tbody>' +
-    S.usuarios.map(u => `<tr><td><b>${esc(u.nombre)}</b></td><td class="mono" style="font-size:.78rem">${esc(u.email)}</td><td>${u.rol === 'lider' ? 'Líder' : 'Colaborador'}</td><td><span class="pill ${u.activo ? 's-ok' : 's-todo'}">${u.activo ? 'Activa' : 'Inactiva'}</span></td><td><button type="button" class="btn ghost sm" data-ue="${u.id}">Editar</button></td></tr>`).join('') +
+  renderEq();
+  const nombreDe = id => (S.usuarios.find(x => x.id === id) || {}).nombre || '—';
+  const equipoTxt = u => {
+    if (u.rol === 'sublider') { const n = S.usuarios.filter(x => x.sublider_id === u.id).length; return `${n} a su cargo`; }
+    if (u.rol === 'dev') return u.sublider_id ? `Con ${esc(nombreDe(u.sublider_id))}` : '<span class="muted">Sin sublíder</span>';
+    return '';
+  };
+  $('adm-usr').innerHTML = '<table><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Equipo</th><th>Estado</th><th></th></tr></thead><tbody>' +
+    S.usuarios.map(u => `<tr><td><b>${esc(u.nombre)}</b></td><td class="mono" style="font-size:.78rem">${esc(u.email)}</td><td>${{ lider: 'Líder', sublider: 'Sublíder', dev: 'Colaborador' }[u.rol] || u.rol}</td><td style="font-size:.84rem">${equipoTxt(u)}</td><td><span class="pill ${u.activo ? 's-ok' : 's-todo'}">${u.activo ? 'Activa' : 'Inactiva'}</span></td><td><button type="button" class="btn ghost sm" data-ue="${u.id}">Editar</button></td></tr>`).join('') +
     '</tbody></table>';
 }
 
@@ -454,129 +525,241 @@ $('uf').onsubmit = async e => {
   if (!nombre) return toast('Escribe el nombre.');
   if ((!UF || password) && password.length < 8) return toast('La contraseña debe tener al menos 8 caracteres.');
   const body = UF
-    ? { accion: 'actualizar_usuario', id: UF, nombre, rol: $('uf-rol').value, activo: $('uf-act').checked, password }
-    : { accion: 'crear_usuario', nombre, email: $('uf-mail').value.trim(), rol: $('uf-rol').value, password };
+    ? { accion: 'actualizar_usuario', id: UF, nombre, rol: $('uf-rol').value, activo: $('uf-act').checked, password, equipo: [...UE] }
+    : { accion: 'crear_usuario', nombre, email: $('uf-mail').value.trim(), rol: $('uf-rol').value, password, equipo: [...UE] };
   const editando = !!UF;
   await accion(async () => { await api('/api/admin', { method: 'POST', body }); ufReset(); }, editando ? 'Cuenta actualizada.' : 'Cuenta creada. Comparte el correo y la contraseña con la persona.', $('uf-submit'));
 };
 
-/* ---------- colaborador: formulario ---------- */
+/* ---------- tarjetas del tablero ---------- */
+const ST_COLOR = { 'Por hacer': 'var(--muted)', 'En progreso': 'var(--accent)', 'Bloqueado': 'var(--crit)', 'Completado': 'var(--ok)' };
+const AV_COLORS = ['#2B59C3', '#1C8556', '#A86A12', '#7A4CC2', '#C03C28', '#0E7C86', '#B5487F', '#4A5A70'];
+const avColor = id => AV_COLORS[Math.abs(+id || 0) % AV_COLORS.length];
+const avatar = (id, nombre) => `<span class="av" style="background:${avColor(id)}" title="${esc(nombre)}">${esc(initials(nombre))}</span>`;
+const fechaCorta = iso => { const [, m, d] = iso.split('-'); return `${+d} ${MESES[+m - 1]}`; };
+const fechaHora = ts => new Intl.DateTimeFormat('es-MX', { timeZone: TZ, day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(ts));
+const IC = {
+  reloj: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  clip: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5l-8.5 8.5a5 5 0 0 1-7-7L14 4.5a3.5 3.5 0 0 1 5 5L10.5 18a2 2 0 0 1-3-3L15 7.5"/></svg>',
+  desc: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>',
+  check: '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M7.5 12.5l3 3 6-6" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+
+function tarjeta(a, conCliente) {
+  const p = P(a.proyecto_id) || {};
+  const pendiente = a.estatus === 'Completado' && !a.revisada;
+  const etiquetas = `<i style="background:${ST_COLOR[a.estatus]}" title="${a.estatus}"></i>` +
+    (pendiente ? '<i style="background:var(--warn)" title="Pendiente de revisión"></i>' : '');
+  const fecha = a.fecha_vencimiento
+    ? `<span class="chip ${vencida(a) ? 'over' : a.estatus === 'Completado' ? 'done' : ''}" title="${vencida(a) ? 'Vencida' : 'Fecha fin'}">${IC.reloj}${fechaCorta(a.fecha_vencimiento)}</span>`
+    : '';
+  const avance = a.avance_pct > 0 && a.avance_pct < 100 ? `<span title="Avance">${a.avance_pct}%</span>` : '';
+  const desc = a.descripcion ? `<span title="Tiene descripción">${IC.desc}</span>` : '';
+  const links = a.enlaces.length ? `<span title="Entregables">${IC.clip}${a.enlaces.length}</span>` : '';
+  const revisada = a.estatus === 'Completado' && a.revisada ? `<span class="chk" title="Revisada">${IC.check}</span>` : '';
+  return `<button type="button" class="tcard" data-card="${a.id}"><span class="tlabels">${etiquetas}</span>` +
+    (conCliente ? `<span class="tcli">${esc(p.cliente)}</span>` : '') +
+    `<span class="ttitle">${revisada}<span>${esc(a.titulo)}</span></span>` +
+    `<span class="tfoot">${fecha}${avance}${desc}${links}${avatar(a.responsable_id, a.responsable)}</span></button>`;
+}
+
+function columnas(acts, { agregar, conCliente }) {
+  return COLS.map(c => {
+    const it = acts.filter(a => a.estatus === c);
+    return `<div class="col"><h3><span class="ct"><i class="coldot" style="background:${ST_COLOR[c]}"></i>${c}</span><span class="mono muted">${it.length}</span></h3>` +
+      (it.map(a => tarjeta(a, conCliente)).join('') || '<p class="muted" style="font-size:.8rem;padding:4px">Sin actividades</p>') +
+      (agregar ? `<button type="button" class="col-add" data-new="${c}">+ Añadir actividad</button>` : '') + '</div>';
+  }).join('');
+}
+
+document.querySelectorAll('.leyenda').forEach(el => {
+  el.innerHTML = COLS.map(c => `<span><i style="background:${ST_COLOR[c]}"></i>${c}</span>`).join('') +
+    '<span><i style="background:var(--warn)"></i>Pendiente de revisión</span>' +
+    `<span><b class="chip over" style="display:inline-flex;align-items:center;gap:3px;font-size:.7rem">${IC.reloj}fecha</b>Vencida</span>`;
+});
+
+function renderMine() {
+  $('mkanban').innerHTML = columnas(AM(), { agregar: true, conCliente: true });
+}
+
+/* ---------- ventana de actividad ---------- */
 const FL = LinkBox('f', () => preview());
+let MODO = null;   // 'nuevo' | 'editar' | 'ver'
+let histToken = 0;
 
 function fillProjs() {
   const cur = $('f-proj').value;
-  $('f-proj').innerHTML = S.proyectos.map(p => `<option value="${p.id}">${esc(p.cliente)} · ${esc(p.nombre)}</option>`).join('');
+  $('f-proj').innerHTML = S.proyectos.filter(p => p.soy_miembro).map(p => `<option value="${p.id}">${esc(p.cliente)} · ${esc(p.nombre)}</option>`).join('');
   if (cur && P(cur)) $('f-proj').value = cur;
 }
 const stVal = () => document.querySelector('input[name=st]:checked').value;
 function setSt(v) { const r = document.querySelector(`input[name=st][value="${v}"]`); if (r) r.checked = true; }
 
-function applyMode() {
-  const ed = !!EDIT;
-  $('f-editbar').hidden = !ed;
-  $('st-bloq').hidden = !ed;
-  $('f-proj').disabled = ed;
-  $('reg-title').textContent = ed ? 'Editar actividad' : 'Registrar actividad del día';
-  $('reg-sub').textContent = ed
-    ? `Actualiza avance, fechas o reporta un bloqueo. Al guardar, ${nombreLider()} lo ve en su panel.`
-    : 'Registra una actividad nueva. Para actualizar una existente, ábrela desde Mis actividades.';
-  $('f-submit').textContent = ed ? 'Guardar cambios' : 'Guardar actividad';
-  $('f-clear').hidden = ed;
-  if (ed) $('f-editlbl').textContent = 'Editando: ' + EDIT.titulo;
-  $('st-hint').textContent = ed
-    ? 'Si algo te detiene, marca Bloqueado y describe el bloqueo. Al llegar a 100% se guarda como Completado.'
-    : 'Al llegar a 100% se guarda como Completado. Si después se bloquea, repórtalo editando la actividad desde Mis actividades.';
-}
-
 function preview() {
-  if (!S) return;
-  $('prev-h').textContent = `Así lo verá ${nombreLider()}`;
+  if (!S || !$('dlg').open) return;
+  const st = stVal();
+  $('dlg-pill').className = 'pill ' + stC(st);
+  $('dlg-pill').textContent = st;
+  $('blkbox').hidden = st !== 'Bloqueado';
+  $('pctv').textContent = $('f-pct').value + '%';
+  $('prev-wrap').hidden = MODO !== 'ver';
   const p = P($('f-proj').value);
   if (!p) { $('prev').textContent = 'No tienes proyectos asignados. Pide a tu líder que te asigne a uno.'; return; }
-  const st = stVal();
-  $('blkbox').hidden = !(EDIT && st === 'Bloqueado');
-  $('pctv').textContent = $('f-pct').value + '%';
   const act = $('f-act').value.trim() || '(nombre de la actividad)';
   $('prev').innerHTML = `${esc(p.cliente.toUpperCase())} · ${esc(act)} | Avance: ${$('f-pct').value}% | Estatus: ${st} | Inicio: ${toDM($('f-ini').value)} | Fin: ${toDM($('f-fin').value)}` +
-    (!$('blkbox').hidden ? `<br><span style="color:var(--crit)">Bloqueo (${esc($('f-btipo').value)}): ${esc($('f-bdesc').value || 'sin descripción')}</span>` : '') +
+    (st === 'Bloqueado' ? `<br><span style="color:var(--crit)">Bloqueo (${esc($('f-btipo').value)}): ${esc($('f-bdesc').value || 'sin descripción')}</span>` : '') +
     ($('f-next').value ? `<br><span class="muted">Siguiente: ${esc($('f-next').value)}</span>` : '') +
     (FL.items.length ? `<br><span class="muted">Entregables: ${FL.items.map(l => esc(TIPO_LBL[l.tipo] || l.tipo)).join(', ')}</span>` : '');
 }
 
-function resetNew() {
-  EDIT = null;
-  ['f-act', 'f-desc', 'f-next', 'f-bdesc', 'f-bquien', 'f-fin', 'f-lu'].forEach(i => ($(i).value = ''));
-  $('f-pct').value = 0;
-  setSt('En progreso');
-  $('f-ini').value = S ? S.hoy : '';
-  FL.set([]);
-  applyMode();
+async function cargarHistorial(a) {
+  const token = ++histToken;
+  const aviso = m => `<li class="muted" style="display:block">${esc(m)}</li>`;
+  if (!a) { $('hist').innerHTML = aviso('El historial aparece cuando guardes la actividad.'); return; }
+  $('hist').innerHTML = aviso('Cargando historial…');
+  try {
+    const d = await api(`/api/actividades?id=${a.id}`);
+    if (token !== histToken) return;
+    $('hist').innerHTML = d.eventos.map(e => `<li class="${e.tipo || ''}">${avatar(e.usuario_id, e.quien)}<div><p><b>${esc(e.quien)}</b> ${esc(e.texto)}</p>${e.detalle ? `<p class="hist-d">${esc(e.detalle)}</p>` : ''}<span class="hist-t">${fechaHora(e.fecha)}</span></div></li>`).join('') || aviso('Sin movimientos.');
+  } catch (err) {
+    if (token === histToken) $('hist').innerHTML = aviso(err.message);
+  }
+}
+
+// modo: 'nuevo' (colaborador), 'editar' (colaborador, actividad propia) o 'ver' (líder, solo lectura)
+function abrirActividad(modo, a, estatus) {
+  if (modo === 'nuevo' && !S.proyectos.some(p => p.soy_miembro)) return toast('Todavía no estás asignado a ningún proyecto. Pide a tu líder que te agregue.');
+  MODO = modo;
+  EDIT = a ? { id: a.id, titulo: a.titulo } : null;
+  const ver = modo === 'ver';
+  if (ver) {
+    const p = P(a.proyecto_id) || {};
+    $('f-proj').innerHTML = `<option value="${a.proyecto_id}">${esc(p.cliente)} · ${esc(p.nombre)}</option>`;
+  } else {
+    fillProjs();
+  }
+  if (a) {
+    $('f-proj').value = a.proyecto_id;
+    $('f-act').value = a.titulo;
+    $('f-desc').value = a.descripcion || '';
+    $('f-next').value = a.siguiente_accion || '';
+    $('f-pct').value = a.avance_pct;
+    setSt(a.estatus);
+    $('f-ini').value = a.fecha_inicio || '';
+    $('f-fin').value = a.fecha_vencimiento || '';
+    const bk = S.bloqueos.find(b => b.actividad_id === a.id);
+    $('f-btipo').value = bk ? bk.tipo : 'Accesos / permisos';
+    $('f-bdesc').value = bk ? bk.descripcion : '';
+    $('f-bquien').value = bk ? bk.responsable_externo : '';
+    FL.set(a.enlaces);
+  } else {
+    ['f-act', 'f-desc', 'f-next', 'f-bdesc', 'f-bquien', 'f-fin', 'f-lu'].forEach(i => ($(i).value = ''));
+    $('f-btipo').selectedIndex = 0;
+    const st = COLS.includes(estatus) ? estatus : 'En progreso';
+    setSt(st);
+    $('f-pct').value = st === 'Completado' ? 100 : 0;
+    $('f-ini').value = S.hoy;
+    FL.set([]);
+  }
+  $('frm').querySelectorAll('input, select, textarea').forEach(el => (el.disabled = ver));
+  $('f-proj').disabled = ver || modo === 'editar';
+  $('dlg').classList.toggle('ver', ver);
+  $('f-submit').textContent = modo === 'nuevo' ? 'Guardar actividad' : 'Guardar cambios';
+  $('f-cancel').textContent = ver ? 'Cerrar' : 'Cancelar';
+  // El líder puede aprobar o devolver desde aquí las actividades completadas pendientes de revisión.
+  const porRevisar = ver && supervisaR() && !esMia(a) && a.estatus === 'Completado' && !a.revisada;
+  $('f-aprobar').hidden = $('f-devolver').hidden = !porRevisar;
+  $('f-aprobar').dataset.ok = $('f-devolver').dataset.back = porRevisar ? a.id : '';
+  $('dlg-ctx').textContent = modo === 'nuevo' ? 'Nueva actividad' : `${a.responsable} · ${(P(a.proyecto_id) || {}).cliente || ''}`;
+  $('st-hint').textContent = ver
+    ? 'Solo lectura: cada colaborador actualiza sus actividades.'
+    : `Al llegar a 100% pasa a Completado y queda pendiente de revisión de ${nombreLider()}.`;
+  if (!$('dlg').open) $('dlg').showModal();
   preview();
+  cargarHistorial(a);
+  if (modo === 'nuevo') $('f-act').focus();
 }
 
-function openEdit(id) {
-  const a = S.actividades.find(x => x.id === +id);
-  if (!a) return;
-  EDIT = { id: a.id, titulo: a.titulo };
-  $('f-proj').value = a.proyecto_id;
-  $('f-act').value = a.titulo;
-  $('f-desc').value = a.descripcion || '';
-  $('f-next').value = a.siguiente_accion || '';
-  $('f-pct').value = a.avance_pct;
-  setSt(a.estatus);
-  $('f-ini').value = a.fecha_inicio || '';
-  $('f-fin').value = a.fecha_vencimiento || '';
-  const bk = S.bloqueos.find(b => b.actividad_id === a.id);
-  $('f-btipo').value = bk ? bk.tipo : 'Accesos / permisos';
-  $('f-bdesc').value = bk ? bk.descripcion : '';
-  $('f-bquien').value = bk ? bk.responsable_externo : '';
-  FL.set(a.enlaces);
-  applyMode();
-  preview();
-  show('registrar');
+function cerrarActividad() {
+  if ($('dlg').open) $('dlg').close();
 }
 
-function mine() {
-  const r = S.actividades.filter(a => a.estatus !== 'Completado');
-  $('mine').innerHTML = r.length
-    ? '<table><tbody>' + r.map(a => `<tr><td><b>${esc(a.titulo)}</b><br><span class="muted" style="font-size:.78rem">${esc((P(a.proyecto_id) || {}).cliente)}</span></td><td><span class="pill ${stC(a.estatus)}">${a.estatus}</span></td><td><button type="button" class="btn ghost sm" data-ed="${a.id}">Editar</button></td></tr>`).join('') + '</tbody></table>'
-    : '<p class="muted">Sin actividades abiertas.</p>';
+/* ---------- ventana de mensaje: pedir actualización o devolver ---------- */
+let MSG = null;   // { tipo: 'actualizacion' | 'devolucion', usuario_id, actividad_id, nombre }
+
+function abrirMensaje(cfg) {
+  MSG = cfg;
+  const dev = cfg.tipo === 'devolucion';
+  const act = cfg.actividad_id && S.actividades.find(a => a.id === +cfg.actividad_id);
+  $('msg-title').textContent = dev ? 'Devolver actividad' : 'Pedir actualización';
+  $('msg-ctx').innerHTML = `Para <b>${esc(cfg.nombre)}</b>` + (act ? ` · «${esc(act.titulo)}»` : ' · todas sus actividades');
+  $('msg-lbl').textContent = dev ? '¿Qué debe ajustar?' : '¿Qué necesitas que actualice?';
+  $('msg-text').placeholder = dev
+    ? 'Ej. Falta validar los totales contra el reporte del cliente y adjuntar el Excel.'
+    : 'Ej. ¿Ya te dieron el acceso? Actualiza el avance y la fecha estimada.';
+  $('msg-text').value = '';
+  $('msg-ok').textContent = dev ? 'Devolver actividad' : 'Enviar solicitud';
+  $('msg-ok').classList.toggle('danger', dev);
+  $('msg').showModal();
+  $('msg-text').focus();
 }
 
-function renderMine() {
-  $('mkanban').innerHTML = COLS.map(c => {
-    const it = S.actividades.filter(a => a.estatus === c);
-    return `<div class="col"><h3>${c}<span class="mono muted">${it.length}</span></h3>${it.map(a => `<button type="button" class="card cardbtn ${c === 'Bloqueado' ? 'bl' : ''}" data-ed="${a.id}"><span class="label" style="font-size:.66rem">${esc((P(a.proyecto_id) || {}).cliente)}</span><b>${esc(a.titulo)}</b>${barMini(a)}${revPill(a)}<div class="ft"><span class="${vencida(a) ? 'over' : ''}">${toDM(a.fecha_inicio)} → ${toDM(a.fecha_vencimiento)}</span><span class="edl">Editar</span></div></button>`).join('') || '<p class="muted" style="font-size:.8rem;padding:4px">Sin actividades</p>'}</div>`;
-  }).join('');
+function cerrarMensaje() {
+  if ($('msg').open) $('msg').close();
 }
+
+$('msg').addEventListener('close', () => { MSG = null; });
+$('msg').addEventListener('click', e => { if (e.target === $('msg')) cerrarMensaje(); });
+$('msg-x').onclick = cerrarMensaje;
+$('msg-cancel').onclick = cerrarMensaje;
+$('msg-form').onsubmit = async e => {
+  e.preventDefault();
+  const cfg = MSG;
+  if (!cfg) return;
+  const texto = $('msg-text').value.trim();
+  if (!texto) { $('msg-text').focus(); return toast(cfg.tipo === 'devolucion' ? 'Escribe por qué la devuelves.' : 'Escribe qué necesitas que actualice.'); }
+  const dev = cfg.tipo === 'devolucion';
+  await accion(async () => {
+    if (dev) await api('/api/revision', { method: 'POST', body: { actividad_id: +cfg.actividad_id, accion: 'devolver', motivo: texto } });
+    else await api('/api/recordatorios', { method: 'POST', body: { usuario_id: +cfg.usuario_id, actividad_id: cfg.actividad_id ? +cfg.actividad_id : null, mensaje: texto } });
+    cerrarMensaje();
+    if (dev) cerrarActividad();
+  }, dev ? `Actividad devuelta a ${primer(cfg.nombre)} con tus comentarios.` : `Se envió la solicitud a ${primer(cfg.nombre)}.`, $('msg-ok'), dev);
+};
 
 function renderHome() {
-  const acts = S.actividades;
+  const acts = AM();
+  const proys = misProyectos();
   const open = acts.filter(a => a.estatus !== 'Completado').length;
   const done = acts.filter(a => a.estatus === 'Completado');
   const pend = done.filter(a => !a.revisada).length;
-  const bl = S.bloqueos.length;
+  const bl = BM().length;
   $('dh-rec').innerHTML = S.recordatorios.length
-    ? `<div class="notice"><ul>${S.recordatorios.map(r => `<li><b>${esc(r.de)}</b> · ${esc(r.mensaje)} <span class="muted">(${hora(r.creado_en)})</span></li>`).join('')}</ul><button type="button" class="btn ghost sm" id="rec-ok">Entendido</button></div>`
+    ? `<div class="notice"><div class="row" style="justify-content:space-between"><h3>Mensajes</h3><button type="button" class="btn ghost sm" id="rec-ok">Marcar como leídos</button></div>
+      <ul class="avisos">${S.recordatorios.map(r => `<li class="${esc(r.tipo)}"><span class="sv"></span><div><p><b>${esc(r.de)}</b> · ${esc(r.mensaje)} <span class="muted" style="font-size:.8rem">${hora(r.creado_en)}</span></p>${r.nota ? `<p class="nota">${esc(r.nota)}</p>` : ''}</div>${r.actividad_id && S.actividades.some(a => a.id === r.actividad_id) ? `<button type="button" class="btn sm" data-card="${r.actividad_id}">Ver actividad</button>` : '<span></span>'}</li>`).join('')}</ul></div>`
     : '';
-  $('dh-kpis').innerHTML = `<div class="kpi"><span class="label">Actividades abiertas</span><b>${open}</b><span class="d muted">En ${S.proyectos.length} ${plural(S.proyectos.length, 'proyecto', 'proyectos')}</span></div>
+  $('dh-kpis').innerHTML = `<div class="kpi"><span class="label">Actividades abiertas</span><b>${open}</b><span class="d muted">En ${proys.length} ${plural(proys.length, 'proyecto', 'proyectos')}</span></div>
     <div class="kpi"><span class="label">Completadas</span><b style="color:var(--ok)">${done.length}</b><span class="d muted">${done.length - pend} revisadas</span></div>
     <div class="kpi"><span class="label">Pendientes de revisión</span><b style="color:var(--warn)">${pend}</b><span class="d muted">Esperando a ${esc(nombreLider())}</span></div>
     <div class="kpi"><span class="label">Bloqueos abiertos</span><b style="${bl ? 'color:var(--crit)' : ''}">${bl}</b><span class="d muted">${bl ? 'Revísalos en Mis bloqueos' : 'Todo en orden'}</span></div>`;
-  $('dh-proj').innerHTML = S.proyectos.length
-    ? S.proyectos.map(p => {
+  $('dh-proj').innerHTML = proys.length
+    ? proys.map(p => {
       const my = acts.filter(a => a.proyecto_id === p.id);
       const d = my.filter(a => a.estatus === 'Completado').length;
       const pc = my.length ? Math.round((d / my.length) * 100) : 0;
       return `<div class="panel" style="display:grid;gap:12px"><div class="panel-head" style="margin:0"><div><p class="label">${esc(p.cliente)}</p><h3>${esc(p.nombre)}</h3><span class="muted" style="font-size:.8rem">Compromiso del proyecto ${toDM(p.fecha_compromiso)} · Responsable ${esc(p.responsable || '—')}</span></div><span class="pill ${stC(p.estatus)}">${p.estatus}</span></div>
       ${my.length ? `<div class="field" style="gap:4px"><span style="font-size:.82rem;font-weight:600">Mi avance: ${d} de ${my.length} ${plural(my.length, 'actividad completada', 'actividades completadas')}</span><div class="bar"><i><span style="width:${pc}%;background:var(--ok)"></span></i><em>${pc}%</em></div></div>
-      <div class="tscroll"><table><tbody>${my.map(a => `<tr><td><b>${esc(a.titulo)}</b><br><span class="muted" style="font-size:.76rem">${toDM(a.fecha_inicio)} → ${toDM(a.fecha_vencimiento)}</span></td><td><div style="display:grid;gap:4px"><span class="pill ${stC(a.estatus)}" style="justify-self:start">${a.estatus}</span>${revPill(a)}</div></td><td class="num">${a.avance_pct}%</td></tr>`).join('')}</tbody></table></div>`
+      <div class="tscroll"><table><tbody>${my.map(a => `<tr data-card="${a.id}" style="cursor:pointer" title="Abrir actividad"><td><b>${esc(a.titulo)}</b><br><span class="muted" style="font-size:.76rem">${toDM(a.fecha_inicio)} → ${toDM(a.fecha_vencimiento)}</span></td><td><div style="display:grid;gap:4px"><span class="pill ${stC(a.estatus)}" style="justify-self:start">${a.estatus}</span>${revPill(a)}</div></td><td class="num">${a.avance_pct}%</td></tr>`).join('')}</tbody></table></div>`
         : '<p class="muted" style="font-size:.86rem">Aún no registras actividades en este proyecto.</p>'}</div>`;
     }).join('')
     : '<div class="panel"><p class="muted">Todavía no estás asignado a ningún proyecto. Pide a tu líder que te agregue.</p></div>';
 }
 
-/* ---------- eventos del formulario ---------- */
+/* ---------- eventos de la ventana ---------- */
+$('dlg').addEventListener('close', () => { MODO = null; EDIT = null; histToken++; });
+$('dlg').addEventListener('click', e => { if (e.target === $('dlg')) cerrarActividad(); }); // clic en el fondo
+$('dlg-x').onclick = cerrarActividad;
+$('f-cancel').onclick = cerrarActividad;
 $('f-proj').onchange = preview;
 ['f-act', 'f-btipo', 'f-bdesc', 'f-next', 'f-ini', 'f-fin'].forEach(i => $(i).addEventListener('input', preview));
 $('f-pct').addEventListener('input', () => {
@@ -592,10 +775,9 @@ document.querySelectorAll('input[name=st]').forEach(r => (r.onchange = () => {
   if (s === 'Por hacer') $('f-pct').value = 0;
   preview();
 }));
-$('f-clear').onclick = resetNew;
-$('f-cancel').onclick = () => { resetNew(); show('misact'); };
 $('frm').onsubmit = async e => {
   e.preventDefault();
+  if (MODO !== 'nuevo' && MODO !== 'editar') return;
   const p = P($('f-proj').value);
   if (!p) return toast('No tienes proyectos asignados.');
   const titulo = $('f-act').value.trim();
@@ -618,30 +800,33 @@ $('frm').onsubmit = async e => {
     enlaces: FL.nuevos(),
     enlaces_eliminar: FL.del,
   };
-  const wasEdit = !!EDIT;
-  if (wasEdit) body.id = EDIT.id;
+  const editando = MODO === 'editar';
+  if (editando) body.id = EDIT.id;
   const btn = $('f-submit');
   btn.disabled = true;
   try {
-    await api('/api/actividades', { method: wasEdit ? 'PUT' : 'POST', body });
+    await api('/api/actividades', { method: editando ? 'PUT' : 'POST', body });
   } catch (err) {
-    btn.disabled = false;
     return toast(err.message);
+  } finally {
+    btn.disabled = false;
   }
-  btn.disabled = false;
-  resetNew();
+  cerrarActividad();
   try { await cargar(); } catch (err) { return toast(err.message); }
   toast(st === 'Completado'
     ? 'Guardada como Completada. Queda pendiente de revisión.'
-    : wasEdit ? `Cambios guardados. ${nombreLider()} ya los ve en su panel.` : `Actividad registrada. ${nombreLider()} ya la ve en su panel.`);
-  if (wasEdit) show('misact');
+    : editando ? `Cambios guardados. ${nombreLider()} ya los ve en su panel.` : `Actividad registrada. ${nombreLider()} ya la ve en su panel.`);
 };
 
 /* ---------- clics delegados ---------- */
 document.addEventListener('click', async e => {
   const t = e.target;
   let b;
-  if ((b = t.closest('[data-ed]'))) return openEdit(b.dataset.ed);
+  if ((b = t.closest('[data-card]'))) {
+    const a = S && S.actividades.find(x => x.id === +b.dataset.card);
+    return a && abrirActividad(esMia(a) ? 'editar' : 'ver', a);
+  }
+  if ((b = t.closest('[data-new]'))) return registraR() && abrirActividad('nuevo', null, b.dataset.new);
   if ((b = t.closest('[data-go]'))) return show(b.dataset.go);
   if ((b = t.closest('[data-kb]'))) { $('kb-proj').value = b.dataset.kb; renderKanban(b.dataset.kb); return show('proyectos'); }
   if ((b = t.closest('[data-pick]'))) { setFocus(b.dataset.pick); return show('persona'); }
@@ -652,14 +837,17 @@ document.addEventListener('click', async e => {
   }
   if ((b = t.closest('[data-ping]'))) {
     const u = persona(b.dataset.ping);
-    return accion(() => api('/api/recordatorios', { method: 'POST', body: { usuario_id: +b.dataset.ping } }), 'Se envió un recordatorio a ' + primer(u && u.nombre), b, false);
+    return abrirMensaje({ tipo: 'actualizacion', usuario_id: b.dataset.ping, actividad_id: b.dataset.act || null, nombre: u ? u.nombre : '' });
   }
-  if ((b = t.closest('[data-ok]')) || (b = t.closest('[data-back]'))) {
-    const ok = 'ok' in b.dataset;
-    const a = S.actividades.find(x => x.id === +(ok ? b.dataset.ok : b.dataset.back));
+  if ((b = t.closest('[data-back]'))) {
+    const a = S.actividades.find(x => x.id === +b.dataset.back);
+    return a && abrirMensaje({ tipo: 'devolucion', usuario_id: a.responsable_id, actividad_id: a.id, nombre: a.responsable });
+  }
+  if ((b = t.closest('[data-ok]'))) {
+    const a = S.actividades.find(x => x.id === +b.dataset.ok);
     if (!a) return;
-    return accion(() => api('/api/revision', { method: 'POST', body: { actividad_id: a.id, accion: ok ? 'aprobar' : 'devolver' } }),
-      ok ? `Actividad aprobada. ${primer(a.responsable)} ya lo ve en su inicio.` : `Actividad devuelta a ${primer(a.responsable)} para ajustes.`, b);
+    return accion(async () => { await api('/api/revision', { method: 'POST', body: { actividad_id: a.id, accion: 'aprobar' } }); cerrarActividad(); },
+      `Actividad aprobada. ${primer(a.responsable)} ya lo ve en su inicio.`, b);
   }
   if ((b = t.closest('[data-unarch]'))) {
     return accion(() => api('/api/admin', { method: 'POST', body: { accion: 'archivar_proyecto', id: +b.dataset.unarch, archivado: false } }), 'Proyecto reactivado.', b);
@@ -672,9 +860,8 @@ function show(v) {
   if (!role || !S) return;
   if (!ALLOWED[role].includes(v)) v = HOME[role];
   document.querySelectorAll('[data-view]').forEach(s => (s.style.display = s.dataset.view === v ? 'grid' : 'none'));
-  const hv = v === 'registrar' && EDIT ? 'misact' : v;
   document.querySelectorAll('aside nav button').forEach(b => {
-    if (b.dataset.v === hv && (v !== 'persona' || +b.dataset.p === focus)) b.setAttribute('aria-current', 'page');
+    if (b.dataset.v === v &&(v !== 'persona' || +b.dataset.p === focus)) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
   });
   if (v === 'persona') renderPersona();
@@ -689,7 +876,6 @@ document.querySelectorAll('aside nav').forEach(n => n.addEventListener('click', 
   const b = e.target.closest('button');
   if (!b || !b.dataset.v) return;
   if (b.dataset.p) setFocus(b.dataset.p);
-  if (b.dataset.v === 'registrar' && EDIT) resetNew();
   show(b.dataset.v);
 }));
 $('focus').onchange = e => setFocus(e.target.value);
@@ -698,13 +884,17 @@ $('kb-proj').onchange = e => renderKanban(e.target.value);
 
 function renderAll() {
   if (!S) return;
-  if (role === 'lider') {
-    fillCli(); fillFocus(); renderKpis(); renderAlerts(); renderProj(); renderFeed(); renderPeople(); fillKb(); renderReview(); renderAdmin();
+  if (supervisaR()) {
+    fillCli(); fillFocus(); renderKpis(); renderAlerts(); renderProj(); renderFeed(); renderPeople(); fillKb(); renderReview();
+    if (role === 'lider') renderAdmin();
     if (curView() === 'persona') renderPersona();
     marcarEquipo();
-  } else {
-    fillProjs(); preview(); mine(); renderMine(); renderHome();
   }
+  if (registraR()) {
+    if (MODO !== 'ver') fillProjs();
+    renderMine(); renderHome();
+  }
+  preview();
   renderBlk();
   tick();
 }
@@ -715,20 +905,21 @@ async function entrar(u) {
   me = u;
   focus = 0;
   EDIT = null;
-  document.querySelectorAll('aside nav').forEach(n => (n.hidden = n.dataset.role !== role));
+  // El sublíder ve las dos secciones del menú: "Mi equipo" y "Mi trabajo" (sin Administración).
+  document.querySelectorAll('aside nav').forEach(n => (n.hidden = n.dataset.role === 'lider' ? !supervisaR() : !registraR()));
+  $('nav-admin').hidden = role !== 'lider';
+  $('nav-sep-equipo').textContent = role === 'lider' ? 'Jefatura' : 'Mi equipo';
   $('me-name').textContent = u.nombre;
-  $('me-role').textContent = role === 'lider' ? 'Líder del equipo' : 'Colaborador';
+  $('me-role').textContent = ROL_LBL[role] || role;
   $('me-av').textContent = initials(u.nombre);
-  $('rolechip').innerHTML = role === 'lider'
-    ? `Sesión de <b>${esc(u.nombre)}</b> · ves a todo el equipo y apruebas lo completado`
-    : `Sesión de <b>${esc(u.nombre)}</b> · solo ves tu trabajo`;
-  $('focusbar').hidden = role !== 'lider';
+  $('rolechip').innerHTML = `Sesión de <b>${esc(u.nombre)}</b> · ` + ({
+    lider: 'ves a todo el equipo y apruebas lo completado',
+    sublider: 'ves tu trabajo y el de tu equipo, y apruebas lo de tu equipo',
+    dev: 'solo ves tu trabajo',
+  }[role] || '');
+  $('focusbar').hidden = !supervisaR();
   await cargar();
-  if (role === 'dev') {
-    const d = new Intl.DateTimeFormat('es-MX', { timeZone: TZ, weekday: 'long', day: '2-digit', month: '2-digit' }).format(new Date());
-    $('reg-lbl').textContent = `${u.nombre} · ${d}`;
-    resetNew();
-  } else {
+  if (role === 'lider') {
     pfReset();
     ufReset();
   }
@@ -738,6 +929,8 @@ async function entrar(u) {
 }
 
 function mostrarLogin() {
+  cerrarMensaje();
+  cerrarActividad();
   role = null;
   me = null;
   S = null;
@@ -882,8 +1075,8 @@ function tick() {
   const saludo = h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
   $('hi-greet').textContent = 'Hola, ' + primer(me.nombre);
   if (role === 'dev') {
-    const bl = S.bloqueos.length;
-    const op = S.actividades.filter(a => a.estatus !== 'Completado').length;
+    const bl = BM().length;
+    const op = AM().filter(a => a.estatus !== 'Completado').length;
     $('hi-sub').textContent = `${saludo}. Tienes ${op} ${plural(op, 'actividad abierta', 'actividades abiertas')}` + (bl ? ` y ${bl} ${plural(bl, 'bloqueo abierto', 'bloqueos abiertos')}.` : '.');
     return;
   }
@@ -898,6 +1091,7 @@ setInterval(tick, 1000);
 (async () => {
   try {
     const d = await api('/api/auth', { sinRedireccion: true });
+    if (!d.usuario) return mostrarLogin();
     await entrar(d.usuario);
   } catch {
     mostrarLogin();

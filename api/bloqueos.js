@@ -2,7 +2,8 @@ import { handler, falla } from '../lib/http.js';
 import { tx } from '../lib/db.js';
 import { hoyMX } from '../lib/fechas.js';
 
-// El colaborador marca como resuelto uno de sus bloqueos
+// Quien registra actividades (colaborador o sublíder) marca como resuelto uno de SUS bloqueos:
+// la consulta filtra por responsable_id = usuario, así que nadie puede resolver bloqueos ajenos.
 export default handler(
   ['POST'],
   async ({ user, body }) =>
@@ -30,6 +31,5 @@ export default handler(
         );
       }
       return { ok: true };
-    }),
-  { rol: 'dev' }
+    })
 );

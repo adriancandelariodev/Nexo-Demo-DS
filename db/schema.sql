@@ -108,3 +108,15 @@ create table if not exists recordatorios (
   leido_en  timestamptz
 );
 create index if not exists recordatorios_pendientes on recordatorios (para_id) where leido_en is null;
+
+-- v2: los avisos pueden ligarse a una actividad y llevan la nota escrita por el líder
+alter table recordatorios add column if not exists actividad_id int references actividades(id) on delete cascade;
+alter table recordatorios add column if not exists tipo text not null default 'aviso';  -- aviso | actualizacion | devolucion
+alter table recordatorios add column if not exists nota text not null default '';
+create index if not exists recordatorios_actividad on recordatorios (actividad_id);
+
+-- v3: sublíderes. Un colaborador puede estar a cargo de un sublíder.
+alter table usuarios drop constraint if exists usuarios_rol_check;
+alter table usuarios add constraint usuarios_rol_check check (rol in ('dev', 'sublider', 'lider'));
+alter table usuarios add column if not exists sublider_id int references usuarios(id) on delete set null;
+create index if not exists usuarios_sublider on usuarios (sublider_id);

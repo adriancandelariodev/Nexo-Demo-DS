@@ -4,6 +4,18 @@ import { q, tx } from '../lib/db.js';
 import { str, fecha, ids, validarEnlaces, validarDominio } from '../lib/validar.js';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ROLES = ['dev', 'sublider', 'lider'];
+const leerRol = (v) => (ROLES.includes(v) ? v : 'dev');
+
+// Deja el equipo del sublíder exactamente con los colaboradores indicados.
+// Si la cuenta ya no es sublíder, sus colaboradores quedan sin sublíder asignado.
+async function asignarEquipo(tq, id, rol, equipo) {
+  await tq(`update usuarios set sublider_id = null where sublider_id = $1 and not (id = any($2::int[]))`, [id, rol === 'sublider' ? equipo : []]);
+  if (rol === 'sublider' && equipo.length) {
+    await tq(`update usuarios set sublider_id = $1 where id = any($2::int[]) and rol = 'dev'`, [id, equipo]);
+  }
+  if (rol !== 'dev') await tq(`update usuarios set sublider_id = null where id = $1`, [id]);
+}
 
 // Altas y cambios de cuentas y proyectos (solo líder)
 export default handler(
@@ -13,26 +25,30 @@ export default handler(
       case 'crear_usuario': {
         const nombre = str(body.nombre, 120);
         const email = str(body.email, 200).toLowerCase();
-        const rol = body.rol === 'lider' ? 'lider' : 'dev';
+        const rol = leerRol(body.rol);
         const password = String(body.password || '');
         if (!nombre || !EMAIL.test(email)) falla(400, 'Escribe un nombre y un correo válido.');
         validarDominio(email);
         if (password.length < 8) falla(400, 'La contraseña debe tener al menos 8 caracteres.');
         const [dup] = await q('select 1 from usuarios where email = $1', [email]);
         if (dup) falla(409, 'Ya existe una cuenta con ese correo.');
-        await q('insert into usuarios (nombre, email, rol, password_hash) values ($1, $2, $3, $4)', [
-          nombre,
-          email,
-          rol,
-          await bcrypt.hash(password, 10),
-        ]);
-        return { ok: true };
+        const hash = await bcrypt.hash(password, 10);
+        return tx(async (tq) => {
+          const [u] = await tq('insert into usuarios (nombre, email, rol, password_hash) values ($1, $2, $3, $4) returning id', [
+            nombre,
+            email,
+            rol,
+            hash,
+          ]);
+          await asignarEquipo(tq, u.id, rol, ids(body.equipo));
+          return { ok: true };
+        });
       }
 
       case 'actualizar_usuario': {
         const id = Number(body.id);
         const nombre = str(body.nombre, 120);
-        const rol = body.rol === 'lider' ? 'lider' : 'dev';
+        const rol = leerRol(body.rol);
         const activo = body.activo !== false;
         const password = String(body.password || '');
         if (!nombre) falla(400, 'Escribe el nombre.');
@@ -42,13 +58,16 @@ export default handler(
         if (password && password.length < 8) falla(400, 'La contraseña debe tener al menos 8 caracteres.');
         const params = [id, nombre, rol, activo];
         if (password) params.push(await bcrypt.hash(password, 10));
-        const r = await q(
-          `update usuarios set nombre = $2, rol = $3, activo = $4${password ? ', password_hash = $5' : ''}
-            where id = $1 returning id`,
-          params
-        );
-        if (!r.length) falla(404, 'No encontramos esa cuenta.');
-        return { ok: true };
+        return tx(async (tq) => {
+          const r = await tq(
+            `update usuarios set nombre = $2, rol = $3, activo = $4${password ? ', password_hash = $5' : ''}
+              where id = $1 returning id`,
+            params
+          );
+          if (!r.length) falla(404, 'No encontramos esa cuenta.');
+          await asignarEquipo(tq, id, rol, ids(body.equipo));
+          return { ok: true };
+        });
       }
 
       case 'guardar_proyecto': {
@@ -88,7 +107,7 @@ export default handler(
           await tq(`delete from proyecto_miembros where proyecto_id = $1 and not (usuario_id = any($2::int[]))`, [id, miembros]);
           await tq(
             `insert into proyecto_miembros (proyecto_id, usuario_id)
-             select $1, u.id from usuarios u where u.id = any($2::int[]) and u.rol = 'dev'
+             select $1, u.id from usuarios u where u.id = any($2::int[]) and u.rol in ('dev', 'sublider')
              on conflict do nothing`,
             [id, miembros]
           );

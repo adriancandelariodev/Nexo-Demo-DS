@@ -8,11 +8,8 @@ import { validarDominio } from '../lib/validar.js';
 export default handler(
   ['GET', 'POST', 'DELETE'],
   async ({ req, res, body }) => {
-    if (req.method === 'GET') {
-      const usuario = await usuarioActual(req);
-      if (!usuario) falla(401, 'Sin sesión.');
-      return { usuario };
-    }
+    // Sin sesión se responde 200 con usuario null: es un estado normal al abrir la página, no un error.
+    if (req.method === 'GET') return { usuario: await usuarioActual(req) };
     if (req.method === 'DELETE') {
       cerrarSesion(res);
       return { ok: true };

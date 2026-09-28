@@ -137,3 +137,8 @@ from (values
 ) as v(proyecto, tipo, url, titulo)
 join proyectos p on p.nombre = v.proyecto
 where not exists (select 1 from enlaces e where e.proyecto_id = p.id);
+
+-- Sublíder de ejemplo: Fernando Gil supervisa a Gabriela Luna y Héctor Vega
+update usuarios set rol = 'sublider' where email = 'fernando.gil@tuempresa.mx';
+update usuarios set sublider_id = (select id from usuarios where email = 'fernando.gil@tuempresa.mx')
+ where email in ('gabriela.luna@tuempresa.mx', 'hector.vega@tuempresa.mx');
