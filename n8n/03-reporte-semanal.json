@@ -8,8 +8,8 @@
         "width": 520,
         "color": 5
       },
-      "id": "9fb3a1a8-a81b-4d51-82e8-909df61c1483",
-      "name": "Nota b2ce",
+      "id": "44603d7a-c49a-4631-898a-741fcff8f704",
+      "name": "Nota e447",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
@@ -28,7 +28,7 @@
           ]
         }
       },
-      "id": "d0127070-d372-4be9-8f12-584bca739744",
+      "id": "5a1f3b4c-3af7-42d8-8eb8-b1be27f1cfcf",
       "name": "Viernes 17:00",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -43,7 +43,7 @@
         "query": "select * from ia_rendimiento_semana order by nombre",
         "options": {}
       },
-      "id": "368b685c-8a62-4a2a-b595-bf3515be743b",
+      "id": "bd1c7665-629c-4f90-a50d-d9919101ad13",
       "name": "Métricas de la semana",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
@@ -56,7 +56,7 @@
       "parameters": {
         "jsCode": "// Junta a todo el equipo en un solo elemento para que la IA escriba todas las observaciones de una vez.\nconst filas = $input.all().map((i) => i.json).filter((f) => f.usuario_id);\nif (!filas.length) return [];\nreturn [{ json: { filas, datos: JSON.stringify(filas) } }];\n"
       },
-      "id": "a89b4889-27f9-4e50-b733-6183077a3d21",
+      "id": "258c2b2c-1125-44bb-84a7-797241e13886",
       "name": "Juntar equipo",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -70,7 +70,7 @@
         "promptType": "define",
         "text": "=Escribe una observación breve por colaborador para el reporte semanal del área de Desarrollo de Software. Devuelve SOLO un arreglo JSON, sin texto antes ni después:\n[{ \"usuario_id\": 1, \"observacion\": \"...\" }]\n\nReglas:\n- Máximo 25 palabras por observación, en español.\n- Basada solo en los datos. Menciona el dato que la justifica (por ejemplo \"3 de 5 días con registro\").\n- Prioriza lo que requiere atención: vencidas, bloqueos abiertos, días sin registro, compromisos sin cumplir. Si todo va bien, dilo.\n- La participación en reuniones (% de voz) es contexto, no un defecto. No juzgues personalidad.\n\nDatos de la semana (una fila por persona):\n{{ $json.datos }}"
       },
-      "id": "ef333376-000e-45da-90d7-80cb3c8c3a97",
+      "id": "cbf22637-7584-42cf-8e13-9b42071ed8d4",
       "name": "Observaciones con IA",
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
@@ -84,20 +84,16 @@
     },
     {
       "parameters": {
-        "model": {
-          "__rl": true,
-          "mode": "list",
-          "value": "claude-sonnet-4-5-20250929",
-          "cachedResultName": "Claude Sonnet 4.5"
-        },
+        "modelName": "models/gemini-3-flash-preview",
         "options": {
-          "maxTokensToSample": 2048
+          "maxOutputTokens": 4096,
+          "temperature": 0.2
         }
       },
-      "id": "4496bc71-a7f9-479b-a9b2-2217fd5b8c14",
-      "name": "Claude",
-      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
-      "typeVersion": 1.3,
+      "id": "e2724369-dc91-4a56-a318-e3f0e71d89e3",
+      "name": "Gemini",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
       "position": [
         660,
         220
@@ -107,7 +103,7 @@
       "parameters": {
         "jsCode": "// Una fila por colaborador con nombres de columna en español (para Google Sheets y el Excel).\nconst filas = $('Juntar equipo').first().json.filas;\nconst s = String($input.first().json.text || '').replace(/```(json)?/gi, '');\nlet obs = [];\ntry {\n  obs = JSON.parse(s.slice(s.indexOf('['), s.lastIndexOf(']') + 1));\n} catch (e) {\n  obs = [];\n}\nconst porId = Object.fromEntries(obs.map((o) => [String(o.usuario_id), o.observacion]));\nconst frac = (a, b) => (Number(b) ? `${a}/${b}` : '—');\n\nreturn filas.map((f) => ({\n  json: {\n    'Semana del': String(f.semana_del).slice(0, 10),\n    'Colaborador': f.nombre,\n    'Días con registro': frac(f.dias_con_registro, f.dias_habiles),\n    'Cerradas': Number(f.cerradas),\n    'Abiertas': Number(f.abiertas),\n    'Vencidas': Number(f.vencidas),\n    'Bloqueos abiertos': Number(f.bloqueos_abiertos),\n    'Sesiones': Number(f.sesiones),\n    '% voz promedio': f.pct_voz_promedio == null ? '—' : Number(f.pct_voz_promedio),\n    'Actualizaciones completas': frac(f.actualizaciones_completas, f.actualizaciones_evaluadas),\n    'Compromisos cumplidos': frac(f.compromisos_cumplidos, f.compromisos_con_fecha),\n    'Observación IA': porId[String(f.usuario_id)] || '',\n  },\n}));\n"
       },
-      "id": "52b6e597-e549-4bbf-a2a8-1213522b5333",
+      "id": "cfadab9c-7052-4788-ae39-2f3d861ec2bf",
       "name": "Filas del reporte",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -137,7 +133,7 @@
         },
         "options": {}
       },
-      "id": "8022895e-aa4e-42d9-9ca8-7d406fff07fa",
+      "id": "a3d06e65-4f09-4787-9ced-a5baad3bd0fe",
       "name": "Agregar a Google Sheets",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
@@ -154,7 +150,7 @@
           "sheetName": "Semana"
         }
       },
-      "id": "8db7c430-307f-431a-b456-e62ebc682d26",
+      "id": "a053f21b-5dbe-4cfa-89df-e88d10ee9e7c",
       "name": "Crear Excel",
       "type": "n8n-nodes-base.convertToFile",
       "typeVersion": 1.1,
@@ -180,7 +176,7 @@
           "appendAttribution": false
         }
       },
-      "id": "7bc9c980-fc43-470b-90de-e7db4cc146af",
+      "id": "8984d68a-e3ba-4d44-9881-e2d41a02aef4",
       "name": "Enviar a la líder",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
@@ -262,7 +258,7 @@
         ]
       ]
     },
-    "Claude": {
+    "Gemini": {
       "ai_languageModel": [
         [
           {

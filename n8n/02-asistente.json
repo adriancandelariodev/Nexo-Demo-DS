@@ -8,8 +8,8 @@
         "width": 520,
         "color": 5
       },
-      "id": "3cae3102-e0e3-4426-84dd-a6d8b602cb14",
-      "name": "Nota 3214",
+      "id": "84c7684d-1bd4-482f-9339-f9e21c97bf4f",
+      "name": "Nota 3d7c",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
@@ -25,7 +25,7 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "3784a41d-94de-4da0-ad49-2c362b47f5fd",
+      "id": "c3be5f7b-b4a5-4e72-8e7a-e0e03d8a5fbd",
       "name": "Webhook de Nexo",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -33,7 +33,7 @@
         0,
         0
       ],
-      "webhookId": "709ac508-aad3-49b2-a7be-b77f618beefd"
+      "webhookId": "f3e7bce0-1521-4235-824b-2a7ebf30627f"
     },
     {
       "parameters": {
@@ -45,7 +45,7 @@
           "enableStreaming": false
         }
       },
-      "id": "9554b791-f866-44d9-845b-2614dff8113d",
+      "id": "e0ca426a-0e95-4b1a-bc7f-2ce2790d9d7f",
       "name": "Asistente",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2.2,
@@ -56,20 +56,16 @@
     },
     {
       "parameters": {
-        "model": {
-          "__rl": true,
-          "mode": "list",
-          "value": "claude-sonnet-4-5-20250929",
-          "cachedResultName": "Claude Sonnet 4.5"
-        },
+        "modelName": "models/gemini-3-flash-preview",
         "options": {
-          "maxTokensToSample": 2048
+          "maxOutputTokens": 4096,
+          "temperature": 0.2
         }
       },
-      "id": "18abe1dd-c5ee-4a30-a395-a2bcf9bb75a9",
-      "name": "Claude",
-      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
-      "typeVersion": 1.3,
+      "id": "7e7bcf4e-cea6-4f81-806f-fb1be37213c3",
+      "name": "Gemini",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
       "position": [
         160,
         240
@@ -81,7 +77,7 @@
         "sessionKey": "={{ $('Webhook de Nexo').item.json.body.sesion }}",
         "contextWindowLength": 8
       },
-      "id": "e1bf203c-ea74-4f11-8953-4054714d8590",
+      "id": "38eb3373-80e4-4afa-a585-c69f9f1cec40",
       "name": "Memoria de la conversación",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1.3,
@@ -98,7 +94,7 @@
         "query": "={{ $fromAI('consulta_sql', 'Una sola consulta SELECT de PostgreSQL sobre las vistas ia_*, con LIMIT', 'string') }}",
         "options": {}
       },
-      "id": "01e52cb5-fb7b-4189-b3e6-b4309b599ed8",
+      "id": "ac96f889-e759-4075-acc2-421fa6917189",
       "name": "consultar_nexo",
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.5,
@@ -113,7 +109,7 @@
         "responseBody": "={{ { respuesta: $json.output } }}",
         "options": {}
       },
-      "id": "87e7afbe-8c9e-407a-b7fa-09b9aa578f45",
+      "id": "fc98aa79-25e3-4f99-8b69-3dc4fef99830",
       "name": "Responder a Nexo",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
@@ -146,7 +142,7 @@
         ]
       ]
     },
-    "Claude": {
+    "Gemini": {
       "ai_languageModel": [
         [
           {
