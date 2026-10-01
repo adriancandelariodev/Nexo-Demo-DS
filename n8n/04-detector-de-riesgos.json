@@ -1,0 +1,191 @@
+{
+  "name": "Nexo · Detector de riesgos",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Nexo · Detector de riesgos\nDe lunes a viernes a las 9:00 revisa actividades vencidas, días sin registro, bloqueos largos y compromisos vencidos. La IA redacta una alerta por persona y aparecen en *Asistente IA* dentro de Nexo.",
+        "height": 200,
+        "width": 520,
+        "color": 5
+      },
+      "id": "b0f06ddb-1a4c-4e15-b1fd-eb8186103600",
+      "name": "Nota 729f",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "a640f31a-713b-4a9a-a225-aa13c3a76bf3",
+      "name": "Lunes a viernes 9:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select\n  (select coalesce(json_agg(r), '[]')::text from ia_riesgos_hoy r) as riesgos_json,\n  (select coalesce(json_agg(x), '[]')::text from (\n     select usuario_id, persona, sesion, fecha, actualizacion_completa, menciono_bloqueo, observacion\n     from ia_participaciones\n     where fecha >= nexo_hoy() - 7\n       and usuario_id in (select usuario_id from ia_riesgos_hoy)\n     order by fecha desc limit 60) x) as contexto_json",
+        "options": {}
+      },
+      "id": "edc96671-bfaf-4d5d-9c1b-05f57494a6af",
+      "name": "Riesgos de hoy",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Eres el detector de riesgos del área de Desarrollo de Software. Con los hallazgos de hoy, redacta alertas para la líder. Devuelve SOLO un arreglo JSON, sin texto antes ni después:\n[{ \"usuario_id\": 1, \"nivel\": \"alta\", \"titulo\": \"máximo 8 palabras\", \"detalle\": \"1 o 2 frases con los datos y una sugerencia concreta\" }]\n\nReglas:\n- Como máximo una alerta por persona: junta sus hallazgos en una sola.\n- nivel \"alta\": actividad vencida o que vence hoy con avance bajo, o varios hallazgos juntos. \"media\": bloqueo largo, días sin registro o compromiso vencido. \"baja\": lo demás.\n- Usa el contexto de reuniones solo si ayuda a explicar el riesgo (por ejemplo, si lo mencionó o no en la daily).\n- No juzgues a las personas; describe la situación y qué haría falta.\n- Si no hay hallazgos, devuelve [].\n- Escribe en español.\n\nHallazgos de hoy:\n{{ $json.riesgos_json }}\n\nContexto de reuniones de los últimos 7 días:\n{{ $json.contexto_json }}"
+      },
+      "id": "2eb854bf-5fc7-4453-a706-3251c060b844",
+      "name": "Redactar alertas con IA",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        440,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-5-20250929",
+          "cachedResultName": "Claude Sonnet 4.5"
+        },
+        "options": {
+          "maxTokensToSample": 2048
+        }
+      },
+      "id": "e4b5497f-d1a6-449c-9bab-3aaed9353728",
+      "name": "Claude",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        440,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Lee la respuesta de la IA y la deja lista para guardar. Si no hay riesgos, se guarda [] (limpia las alertas).\nconst s = String($input.first().json.text || '').replace(/```(json)?/gi, '');\nlet alertas = [];\nconst ini = s.indexOf('[');\nconst fin = s.lastIndexOf(']');\nif (ini >= 0 && fin > ini) alertas = JSON.parse(s.slice(ini, fin + 1));\nconst validos = new Set(JSON.parse($('Riesgos de hoy').first().json.riesgos_json).map((r) => r.usuario_id));\nalertas = alertas.filter((a) => a && a.titulo && (a.usuario_id == null || validos.has(Number(a.usuario_id))));\nreturn [{ json: { total: alertas.length, alertas: JSON.stringify(alertas) } }];\n"
+      },
+      "id": "26a1d0bd-04ea-4d7f-9943-3dc1ebe32d50",
+      "name": "Preparar alertas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select nexo_guardar_alertas($1::jsonb) as guardadas",
+        "options": {
+          "queryReplacement": "={{ $json.alertas }}"
+        }
+      },
+      "id": "dd444098-f685-4978-9796-846abea2b93f",
+      "name": "Guardar alertas en Nexo",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        980,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Lunes a viernes 9:00": {
+      "main": [
+        [
+          {
+            "node": "Riesgos de hoy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Riesgos de hoy": {
+      "main": [
+        [
+          {
+            "node": "Redactar alertas con IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redactar alertas con IA": {
+      "main": [
+        [
+          {
+            "node": "Preparar alertas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar alertas": {
+      "main": [
+        [
+          {
+            "node": "Guardar alertas en Nexo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Redactar alertas con IA",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Mexico_City",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

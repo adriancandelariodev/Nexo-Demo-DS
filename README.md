@@ -100,6 +100,14 @@ En Neon → **SQL Editor**, ejecuta `backend/db/schema.sql`. Después:
 
 ---
 
+## IA con n8n
+
+Nexo tiene dos vistas nuevas: **Asistente IA** (la líder pregunta en lenguaje natural) y **Sesiones** (resúmenes de reuniones de Google Meet, compromisos y métricas de comunicación). Las alimentan cuatro flujos de n8n que están en `n8n/`. La guía completa para conectarlos está en **[n8n/README.md](n8n/README.md)**.
+
+Sin n8n, Nexo funciona igual: las vistas nuevas muestran que todavía no hay sesiones y el asistente avisa que falta configurarlo.
+
+---
+
 ## Reglas de negocio
 
 - **Avance del proyecto** = actividades completadas ÷ actividades totales.

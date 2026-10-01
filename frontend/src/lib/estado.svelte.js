@@ -5,7 +5,7 @@ import { horaHMS, sinDuplicados } from './util.js';
 export const HOME = { lider: 'inicio', sublider: 'inicio', dev: 'dinicio' };
 const VISTAS_EQUIPO = ['inicio', 'proyectos', 'revisar', 'bloqueos', 'persona'];
 const VISTAS_MIAS = ['dinicio', 'misact', 'misblk'];
-export const ALLOWED = { lider: [...VISTAS_EQUIPO, 'admin'], sublider: [...VISTAS_EQUIPO, ...VISTAS_MIAS], dev: VISTAS_MIAS };
+export const ALLOWED = { lider: [...VISTAS_EQUIPO, 'admin', 'asistente', 'sesiones'], sublider: [...VISTAS_EQUIPO, ...VISTAS_MIAS, 'sesiones'], dev: [...VISTAS_MIAS, 'sesiones'] };
 
 export const app = $state({
   S: null,            // lo que devuelve /api/estado

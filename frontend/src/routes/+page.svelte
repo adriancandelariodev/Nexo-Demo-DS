@@ -17,8 +17,10 @@
   import MiInicio from '$lib/vistas/MiInicio.svelte';
   import MisActividades from '$lib/vistas/MisActividades.svelte';
   import MisBloqueos from '$lib/vistas/MisBloqueos.svelte';
+  import Asistente from '$lib/vistas/Asistente.svelte';
+  import Sesiones from '$lib/vistas/Sesiones.svelte';
 
-  const VISTAS = { inicio: PanelGeneral, proyectos: Proyectos, bloqueos: Bloqueos, revisar: Revisar, persona: Persona, admin: Admin, dinicio: MiInicio, misact: MisActividades, misblk: MisBloqueos };
+  const VISTAS = { inicio: PanelGeneral, proyectos: Proyectos, bloqueos: Bloqueos, revisar: Revisar, persona: Persona, admin: Admin, dinicio: MiInicio, misact: MisActividades, misblk: MisBloqueos, asistente: Asistente, sesiones: Sesiones };
   const Vista = $derived(VISTAS[app.vista]);
   const lugarAviso = $derived(app.mensaje ? 'msg' : app.ventana ? 'dlg' : 'body');
 

@@ -29,6 +29,9 @@
     <button data-v="revisar" aria-current={actual('revisar')} onclick={() => irA('revisar')}>Por revisar <span class="cnt" id="nrev" style="background:var(--ok)" hidden={!porRevisar}>{porRevisar}</span></button>
     <button data-v="bloqueos" aria-current={actual('bloqueos')} onclick={() => irA('bloqueos')}>Bloqueos <span class="cnt" id="nblk" hidden={!bloqEquipo}>{bloqEquipo}</span></button>
     <button data-v="admin" id="nav-admin" hidden={app.role !== 'lider'} aria-current={actual('admin')} onclick={() => irA('admin')}>Administración</button>
+    <span class="navsep">Inteligencia</span>
+    <button data-v="asistente" hidden={app.role !== 'lider'} aria-current={actual('asistente')} onclick={() => irA('asistente')}>Asistente IA <span class="nuevo">IA</span></button>
+    <button data-v="sesiones" aria-current={actual('sesiones')} onclick={() => irA('sesiones')}>Sesiones <span class="nuevo">IA</span></button>
     <span class="navsep">Equipo</span>
     <div id="teamnav" style="display:contents">
       {#each app.S.personas || [] as p (p.id)}
@@ -43,6 +46,7 @@
     <button type="button" data-new="En progreso" onclick={() => abrirActividad('nuevo', null, 'En progreso')}>+ Registrar actividad</button>
     <button data-v="misact" aria-current={actual('misact')} onclick={() => irA('misact')}>Mis actividades</button>
     <button data-v="misblk" aria-current={actual('misblk')} onclick={() => irA('misblk')}>Mis bloqueos <span class="cnt" id="nmblk" hidden={!misBloq}>{misBloq}</span></button>
+    <button data-v="sesiones" hidden={app.role !== 'dev'} aria-current={actual('sesiones')} onclick={() => irA('sesiones')}>Mis sesiones</button>
   </nav>
 
   <div class="me"><span class="avatar" id="me-av">{initials(app.me?.nombre)}</span><div class="who"><b id="me-name">{app.me?.nombre}</b><small id="me-role">{ROL_LBL[app.role] || app.role}</small></div><button id="logout" type="button" onclick={salir}>Salir</button></div>

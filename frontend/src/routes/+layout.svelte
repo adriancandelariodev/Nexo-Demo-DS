@@ -11,6 +11,7 @@
   import '../styles/09-ventanas.css';
   import '../styles/10-responsive.css';
   import '../styles/11-login-red-neuronal.css';
+  import '../styles/12-ia.css';
 
   let { children } = $props();
 </script>

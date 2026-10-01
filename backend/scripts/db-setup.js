@@ -18,6 +18,8 @@ await client.connect();
 try {
   await client.query(await leer('schema.sql'));
   console.log('✔ Tablas creadas');
+  await client.query(await leer('ia.sql'));
+  console.log('✔ Tablas, vistas y funciones de IA creadas');
   if (process.argv.includes('--demo')) {
     await client.query(await leer('seed.sql'));
     console.log('✔ Datos de ejemplo cargados (contraseña de todas las cuentas: Nexo2026)');

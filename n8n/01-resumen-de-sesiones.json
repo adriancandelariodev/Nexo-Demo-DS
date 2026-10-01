@@ -1,0 +1,424 @@
+{
+  "name": "Nexo · Resumen de sesiones",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Nexo · Resumen de sesiones\nDe lunes a viernes, cada 30 min entre 8:00 y 20:30, busca en Google Calendar las reuniones que ya terminaron y tienen **transcripción de Meet** adjunta, la IA las analiza y se guardan en Nexo (tabla `sesiones`).\n\n**Configura:** el calendario en *Configuración*, y las credenciales de Postgres (usuario `nexo_n8n`), Google Calendar, Google Drive y Anthropic.",
+        "height": 220,
+        "width": 520,
+        "color": 5
+      },
+      "id": "33472d99-b976-4e35-8790-57d04a50b226",
+      "name": "Nota 040b",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/30 8-20 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "545c5792-4e29-483f-bae1-446e41a7c400",
+      "name": "Cada 30 min en horario laboral",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "446c25e5-926d-454a-ba32-fd233fb7ce02",
+              "name": "calendario",
+              "value": "primary",
+              "type": "string"
+            },
+            {
+              "id": "4549cf0f-cae5-488f-96e5-2940699fe013",
+              "name": "horas_atras",
+              "value": 72,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "235544c3-7c78-4798-afe1-4f6336b994f2",
+      "name": "Configuración",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select\n  (select coalesce(json_agg(nombre order by nombre), '[]') from ia_personas) as personas,\n  (select coalesce(json_agg(json_build_object('proyecto', proyecto, 'cliente', cliente)), '[]') from ia_proyectos where not archivado) as proyectos,\n  (select coalesce(json_agg(json_build_object('id', compromiso_id, 'responsable', responsable, 'descripcion', descripcion)), '[]')\n     from ia_compromisos where estado <> 'Cumplido' and fecha_sesion >= nexo_hoy() - 45) as compromisos_abiertos",
+        "options": {}
+      },
+      "id": "1fb2cc35-0bce-4c17-b40d-35053cb66542",
+      "name": "Contexto de Nexo",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent($('Configuración').first().json.calendario) }}/events",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "timeMin",
+              "value": "={{ $now.minus({ hours: $('Configuración').first().json.horas_atras }).toISO() }}"
+            },
+            {
+              "name": "timeMax",
+              "value": "={{ $now.toISO() }}"
+            },
+            {
+              "name": "singleEvents",
+              "value": "true"
+            },
+            {
+              "name": "maxResults",
+              "value": "250"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0538cc1a-2db1-4a3a-a98a-c41e20ab1aaf",
+      "name": "Eventos del calendario",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Reuniones que ya terminaron (hace 10+ min) y tienen transcripción de Meet adjunta al evento.\nconst eventos = $input.first().json.items || [];\nconst limite = Date.now() - 10 * 60 * 1000;\nconst lista = [];\n\nfor (const ev of eventos) {\n  if (ev.status === 'cancelled' || !ev.end?.dateTime) continue;\n  if (new Date(ev.end.dateTime).getTime() > limite) continue;\n  const doc = (ev.attachments || []).find(\n    (a) => a.mimeType === 'application/vnd.google-apps.document' && /transcri/i.test(a.title || '')\n  );\n  if (!doc?.fileId) continue;\n  lista.push({\n    calendar_id: ev.id,\n    titulo: ev.summary || 'Sin título',\n    inicio: ev.start.dateTime,\n    fin: ev.end.dateTime,\n    doc_id: doc.fileId,\n    asistentes: (ev.attendees || []).filter((a) => !a.resource).map((a) => a.email),\n  });\n}\n\nif (!lista.length) return [];\nreturn [{ json: { eventos: lista } }];\n"
+      },
+      "id": "1cbef41d-302f-428e-acba-2b8c134da1d2",
+      "name": "Reuniones con transcripción",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select coalesce(jsonb_agg(calendar_id), '[]'::jsonb) as hechas\nfrom ia_sesiones\nwhere calendar_id in (select jsonb_array_elements_text($1::jsonb))",
+        "options": {
+          "queryReplacement": "={{ JSON.stringify($json.eventos.map(e => e.calendar_id)) }}"
+        }
+      },
+      "id": "749aafb8-2087-4a5f-ad6b-4a20fd430757",
+      "name": "¿Ya procesadas?",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Descarta las reuniones que Nexo ya tiene guardadas. Máximo 5 por corrida.\nconst hechas = new Set($input.first().json.hechas || []);\nconst eventos = $('Reuniones con transcripción').first().json.eventos;\nreturn eventos\n  .filter((e) => !hechas.has(e.calendar_id))\n  .slice(0, 5)\n  .map((e) => ({ json: e }));\n"
+      },
+      "id": "27656799-a8c2-45cf-894f-e75feffbdf5c",
+      "name": "Pendientes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $json.doc_id }}/export",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "mimeType",
+              "value": "text/plain"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "texto"
+            }
+          }
+        }
+      },
+      "id": "18ada852-0197-4890-97d3-8c985a01c98d",
+      "name": "Descargar transcripción",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Mide cuánto habló cada persona a partir del texto de la transcripción de Meet.\n// Formato de Meet: líneas \"Nombre Apellido: lo que dijo\" separadas por marcas de tiempo \"00:05:12\".\nconst ctx = $('Contexto de Nexo').first().json;\nconst eventos = $('Pendientes').all();\nconst salida = [];\n\n$input.all().forEach((it, i) => {\n  const ev = eventos[i]?.json;\n  const bruto = String(it.json.texto || '');\n  if (!ev || !bruto.trim()) return; // sin permiso para leer el Doc o transcripción vacía\n\n  const conteo = {};\n  const limpias = [];\n  let anterior = null;\n  for (const linea of bruto.split(/\\r?\\n/)) {\n    const l = linea.trim();\n    if (!l || /^\\d{1,2}:\\d{2}(:\\d{2})?$/.test(l)) continue; // marcas de tiempo\n    const m = l.match(/^([^:\\d][^:]{1,60}):\\s+(.+)$/);\n    if (m && !/https?$/i.test(m[1])) {\n      const nombre = m[1].trim();\n      const palabras = m[2].split(/\\s+/).filter(Boolean).length;\n      conteo[nombre] ??= { nombre, palabras: 0, intervenciones: 0 };\n      conteo[nombre].palabras += palabras;\n      if (anterior !== nombre) conteo[nombre].intervenciones += 1;\n      anterior = nombre;\n      limpias.push(`${nombre}: ${m[2]}`);\n    } else if (limpias.length) {\n      limpias.push(l); // continuación o encabezado\n    }\n  }\n  const total = Object.values(conteo).reduce((t, p) => t + p.palabras, 0);\n  if (!total) return;\n  const participacion = Object.values(conteo)\n    .map((p) => ({ ...p, pct_voz: Math.round((p.palabras / total) * 1000) / 10 }))\n    .sort((a, b) => b.palabras - a.palabras);\n\n  let texto = limpias.join('\\n');\n  if (texto.length > 150000) texto = texto.slice(0, 150000) + '\\n[transcripción recortada]';\n\n  salida.push({\n    json: {\n      evento: ev,\n      participacion,\n      hablantes: participacion.map((p) => p.nombre).join(', '),\n      texto,\n      personas: JSON.stringify(ctx.personas),\n      proyectos: JSON.stringify(ctx.proyectos),\n      compromisos_abiertos: JSON.stringify(ctx.compromisos_abiertos),\n    },\n    pairedItem: i,\n  });\n});\n\nreturn salida;\n"
+      },
+      "id": "495eb81e-2b7c-4c26-b2ad-c71f748a9388",
+      "name": "Medir participación",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Eres el analista de reuniones del área de Desarrollo de Software. Analiza la transcripción de una reunión de Google Meet y devuelve SOLO un objeto JSON válido, sin texto antes ni después y sin bloques de código.\n\nReunión: {{ $json.evento.titulo }}\nFecha y hora de la reunión: {{ $json.evento.inicio }}\nPersonas del equipo registradas en Nexo: {{ $json.personas }}\nProyectos activos (usa el valor exacto de \"proyecto\"): {{ $json.proyectos }}\nCompromisos abiertos de reuniones anteriores: {{ $json.compromisos_abiertos }}\nHablantes detectados en la transcripción: {{ $json.hablantes }}\n\nFormato de respuesta:\n{\n  \"proyecto\": \"nombre exacto de un proyecto de la lista, o null si la reunión no es de un proyecto específico\",\n  \"resumen\": \"3 a 5 frases: de qué se habló, avances con cifras, problemas y decisiones\",\n  \"acuerdos\": [\"una decisión por elemento\"],\n  \"cita\": \"la frase textual más representativa, tal como se dijo\",\n  \"compromisos\": [\n    { \"responsable\": \"nombre como aparece en la transcripción\", \"descripcion\": \"qué va a hacer\", \"fecha_limite\": \"YYYY-MM-DD o null\" }\n  ],\n  \"compromisos_cumplidos\": [1, 2],\n  \"personas\": [\n    { \"nombre\": \"nombre como aparece en la transcripción\", \"actualizacion_completa\": true, \"menciono_bloqueo\": false, \"observacion\": \"1 o 2 frases\" }\n  ]\n}\n\nReglas:\n- \"compromisos_cumplidos\" lleva los id de la lista de compromisos abiertos que en esta reunión se reportaron como terminados. Si no hay, usa [].\n- \"personas\" incluye solo a hablantes que son del equipo (no clientes ni externos).\n- \"actualizacion_completa\": true si al reportar su trabajo dio estatus, al menos un dato concreto (porcentaje, cantidad o fecha) y el siguiente paso; false si le faltó alguno; null si no reportó avance en esta reunión.\n- \"menciono_bloqueo\": true solo si comunicó un impedimento de su propio trabajo.\n- \"observacion\": describe hechos observables (qué reportó, si dio datos, si cerró con siguiente paso, si comunicó un bloqueo). No juzgues personalidad, tono, acento, seguridad al hablar ni capacidad. Si habló poco, dilo como hecho, sin valorarlo.\n- Convierte fechas relativas (\"el viernes\", \"mañana\") a YYYY-MM-DD usando la fecha de la reunión.\n- No inventes nada que no esté en la transcripción. Escribe en español.\n\nTranscripción:\n{{ $json.texto }}"
+      },
+      "id": "b5ebbe4e-f2cd-4798-9f0e-fb63a22ffdd3",
+      "name": "Analizar sesión con IA",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1980,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-5-20250929",
+          "cachedResultName": "Claude Sonnet 4.5"
+        },
+        "options": {
+          "maxTokensToSample": 4096
+        }
+      },
+      "id": "b2c43797-c00c-48e3-b650-9c4b8b4d6dd2",
+      "name": "Claude",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        1980,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Une la medición por código con el análisis de la IA y arma lo que se guarda en Nexo.\nconst base = $('Medir participación').all();\n\nfunction leerJSON(t) {\n  const s = String(t || '').replace(/```(json)?/gi, '');\n  const ini = s.indexOf('{');\n  const fin = s.lastIndexOf('}');\n  if (ini < 0 || fin < ini) throw new Error('La IA no devolvió JSON: ' + s.slice(0, 200));\n  return JSON.parse(s.slice(ini, fin + 1));\n}\nconst lista = (v) => (Array.isArray(v) ? v : []);\n\nreturn $input.all().map((it, i) => {\n  const b = base[i].json;\n  const ia = leerJSON(it.json.text);\n  const abiertos = new Set(JSON.parse(b.compromisos_abiertos || '[]').map((c) => c.id));\n  return {\n    json: {\n      titulo: b.evento.titulo,\n      payload: {\n        evento: b.evento,\n        proyecto: ia.proyecto || null,\n        resumen: String(ia.resumen || ''),\n        acuerdos: lista(ia.acuerdos).map(String),\n        cita: String(ia.cita || ''),\n        participacion: b.participacion,\n        personas: lista(ia.personas),\n        compromisos: lista(ia.compromisos),\n        compromisos_cumplidos: lista(ia.compromisos_cumplidos).map(Number).filter((id) => abiertos.has(id)),\n      },\n    },\n    pairedItem: i,\n  };\n});\n"
+      },
+      "id": "df2338e3-5b93-4fc3-aca6-ba8abcaef920",
+      "name": "Armar registro",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2300,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select nexo_guardar_sesion($1::jsonb) as sesion_id",
+        "options": {
+          "queryReplacement": "={{ JSON.stringify($json.payload) }}",
+          "queryBatching": "independently"
+        }
+      },
+      "id": "626f4298-08e5-472e-8862-1ad9de73b278",
+      "name": "Guardar en Nexo",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2520,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Cada 30 min en horario laboral": {
+      "main": [
+        [
+          {
+            "node": "Configuración",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configuración": {
+      "main": [
+        [
+          {
+            "node": "Contexto de Nexo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexto de Nexo": {
+      "main": [
+        [
+          {
+            "node": "Eventos del calendario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eventos del calendario": {
+      "main": [
+        [
+          {
+            "node": "Reuniones con transcripción",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reuniones con transcripción": {
+      "main": [
+        [
+          {
+            "node": "¿Ya procesadas?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Ya procesadas?": {
+      "main": [
+        [
+          {
+            "node": "Pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pendientes": {
+      "main": [
+        [
+          {
+            "node": "Descargar transcripción",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descargar transcripción": {
+      "main": [
+        [
+          {
+            "node": "Medir participación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Medir participación": {
+      "main": [
+        [
+          {
+            "node": "Analizar sesión con IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analizar sesión con IA": {
+      "main": [
+        [
+          {
+            "node": "Armar registro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar registro": {
+      "main": [
+        [
+          {
+            "node": "Guardar en Nexo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Analizar sesión con IA",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Mexico_City",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

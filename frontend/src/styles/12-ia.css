@@ -1,0 +1,64 @@
+/* IA: asistente, sesiones de Meet y alertas (flujos de n8n) */
+:root{--ai:#6B4FC8;--ai-soft:#EEEAFB}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ai:#B3A0F5;--ai-soft:#251E3F}}
+:root[data-theme="dark"]{--ai:#B3A0F5;--ai-soft:#251E3F}
+
+.s-ai{background:var(--ai-soft);color:var(--ai)}
+aside nav .nuevo{font-family:var(--mono);font-size:.6rem;font-weight:600;background:#6B4FC8;color:#fff;border-radius:999px;padding:1px 7px;letter-spacing:.04em}
+.avatar.ai{background:var(--ai);color:#fff}
+
+/* chat */
+.chat{display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-height:540px;padding:0;overflow:hidden}
+.chat-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.chat-log{padding:18px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;max-height:62vh}
+.msg{display:flex;gap:10px;align-items:flex-start;max-width:100%}
+.msg.yo{flex-direction:row-reverse}
+.bubble{background:var(--surface-2);border-radius:12px;padding:10px 14px;font-size:.9rem;min-width:0;max-width:68ch;overflow-wrap:anywhere}
+.msg.yo .bubble{background:var(--accent);color:var(--accent-ink)}
+.bubble p+p,.bubble p+ul,.bubble ul+p{margin-top:8px}
+.bubble ul{margin:6px 0 0;padding-left:18px;display:grid;gap:4px}
+.bubble.error{background:var(--crit-soft);color:var(--crit)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 18px 12px}
+.chip{font:inherit;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:.8rem;cursor:pointer;color:var(--ink)}
+.chip:hover{border-color:var(--ai);color:var(--ai)}
+.chip:disabled{opacity:.5;cursor:default}
+.chat-in{display:flex;gap:8px;padding:12px 18px;border-top:1px solid var(--line)}
+.chat-in input{flex:1}
+.chat-nota{font-size:.76rem;color:var(--muted);padding:0 18px 12px}
+.escribiendo span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--muted);margin-right:3px;animation:parpadeo 1s infinite}
+.escribiendo span:nth-child(2){animation-delay:.2s}.escribiendo span:nth-child(3){animation-delay:.4s}
+@keyframes parpadeo{0%,100%{opacity:.25}50%{opacity:1}}
+
+/* alertas */
+.alertas-ia{display:grid;gap:12px}
+.alerta-ia{display:grid;grid-template-columns:4px minmax(0,1fr);gap:12px}
+.alerta-ia i{border-radius:2px;background:var(--warn)}
+.alerta-ia i.alta{background:var(--crit)}.alerta-ia i.baja{background:var(--muted)}
+.alerta-ia p{font-size:.84rem;color:var(--muted)}
+
+/* sesiones */
+.slist{list-style:none;margin:0;padding:0;display:grid}
+.slist button{font:inherit;color:inherit;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:12px 8px;display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:12px;align-items:center;cursor:pointer;border-radius:6px}
+.slist li:first-child button{border-top:0}
+.slist button:hover{background:var(--surface-2)}
+.slist button[aria-pressed="true"]{background:var(--accent-soft)}
+.sdia{font-family:var(--mono);text-align:center;line-height:1.1;font-size:.68rem;color:var(--muted);text-transform:uppercase}
+.sdia b{display:block;font-family:var(--display);font-size:1.25rem;color:var(--ink)}
+.stitulo{font-weight:600;font-size:.9rem;display:block}
+.smeta{font-size:.78rem;color:var(--muted)}
+.sec{display:grid;gap:8px}
+.sec+.sec{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
+.sec ul{margin:0;padding-left:18px;display:grid;gap:4px;font-size:.88rem}
+.cita{border-left:3px solid var(--ai);padding:4px 10px;font-size:.86rem;color:var(--muted);font-style:italic}
+.comp{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;font-size:.88rem;padding:6px 0;border-top:1px dashed var(--line)}
+.comp:first-of-type{border-top:0}
+.part{display:grid;grid-template-columns:140px minmax(0,1fr);gap:10px;align-items:center;font-size:.86rem}
+.part .bar{min-width:0}
+.part .bar i span{background:var(--ai)}
+.obs{display:grid;gap:10px}
+.obs .o{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;font-size:.86rem}
+.obs .o .avatar{grid-row:auto}
+.marcas{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+
+@media (max-width:760px){.part{grid-template-columns:96px minmax(0,1fr)}}
+@media (prefers-reduced-motion:reduce){.escribiendo span{animation:none}}
