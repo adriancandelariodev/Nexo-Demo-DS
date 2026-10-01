@@ -3,17 +3,17 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Nexo · Asistente\nNexo manda la pregunta de la líder a este webhook y la IA responde consultando Postgres **en solo lectura** (usuario `nexo_lector`).\n\n**Configura:** credencial *Header Auth* con nombre `X-Nexo-Secret` y el mismo valor que `N8N_SECRET` en Vercel. Copia la *Production URL* del webhook a `N8N_ASISTENTE_URL`.",
-        "height": 240,
-        "width": 520,
+        "content": "## Nexo · Asistente (versión simple)\nNexo manda la pregunta, se toma una foto de los datos de Nexo con una sola consulta (usuario `nexo_lector`) y Gemini responde en **una sola llamada**, sin herramientas. Más estable con la capa gratuita.\n\n**Credenciales:** Webhook → *Nexo · secreto* · Datos de Nexo → *Nexo · lector* · Gemini → *Gemini*.",
+        "height": 220,
+        "width": 560,
         "color": 5
       },
-      "id": "84c7684d-1bd4-482f-9339-f9e21c97bf4f",
-      "name": "Nota 3d7c",
+      "id": "d5138a2a-26fd-47f8-b361-4c34c06016b5",
+      "name": "Nota",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -260,
+        -300,
         -300
       ]
     },
@@ -25,7 +25,7 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "c3be5f7b-b4a5-4e72-8e7a-e0e03d8a5fbd",
+      "id": "e99a972e-9f39-4a9a-a08e-0125d3b8df93",
       "name": "Webhook de Nexo",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -33,88 +33,69 @@
         0,
         0
       ],
-      "webhookId": "f3e7bce0-1521-4235-824b-2a7ebf30627f"
+      "webhookId": "a61ea3d2-83e0-4976-9c26-bb80ab86a447"
     },
     {
       "parameters": {
-        "promptType": "define",
-        "text": "={{ $json.body.pregunta }}",
-        "options": {
-          "systemMessage": "=Eres el asistente de Nexo, el sistema de seguimiento del área de Desarrollo de Software. Hablas con {{ $('Webhook de Nexo').item.json.body.usuario }}, líder del equipo. Hoy es {{ $('Webhook de Nexo').item.json.body.hoy }} (zona horaria America/Mexico_City).\n\nPara responder usa la herramienta consultar_nexo, que ejecuta UNA consulta SELECT de PostgreSQL. Solo puedes leer estas vistas:\n\n- ia_personas(usuario_id, nombre, email, rol)\n- ia_proyectos(proyecto_id, proyecto, cliente, responsable, fecha_inicio, fecha_compromiso, archivado, avance_promedio_pct)\n- ia_actividades(actividad_id, proyecto, cliente, usuario_id, responsable, titulo, estatus, avance_pct, fecha_inicio, fecha_vencimiento, vencida, ultimo_avance, descripcion, siguiente_accion, revisada, cerrada_el). estatus: 'Por hacer', 'En progreso', 'Bloqueado', 'Completado'.\n- ia_avances(fecha, usuario_id, responsable, actividad, proyecto, estatus, avance_pct, descripcion, siguiente_accion). Últimos 120 días; cada fila es un registro diario.\n- ia_bloqueos(bloqueo_id, usuario_id, responsable, actividad, proyecto, tipo, descripcion, responsable_externo, abierto_el, resuelto_el, abierto, dias_abierto)\n- ia_sesiones(sesion_id, titulo, inicio, fecha, duracion_min, proyecto, resumen, acuerdos, cita, participantes, calendar_id). Reuniones de Google Meet ya resumidas.\n- ia_participaciones(sesion_id, sesion, fecha, usuario_id, persona, externo, pct_voz, palabras, intervenciones, actualizacion_completa, menciono_bloqueo, observacion). pct_voz = % de las palabras de la reunión.\n- ia_compromisos(compromiso_id, sesion_id, sesion, fecha_sesion, usuario_id, responsable, descripcion, fecha_limite, estado). estado: 'Pendiente', 'Vencido', 'Cumplido'.\n- ia_rendimiento_semana(usuario_id, nombre, semana_del, dias_con_registro, dias_habiles, cerradas, abiertas, vencidas, bloqueos_abiertos, sesiones, pct_voz_promedio, actualizaciones_completas, actualizaciones_evaluadas, compromisos_cumplidos, compromisos_con_fecha)\n- ia_riesgos_hoy(usuario_id, nombre, tipo, detalle)\n\nCómo consultar:\n- Solo SELECT. Siempre agrega LIMIT 200 o menos.\n- Busca personas sin acentos ni mayúsculas: where nexo_norm(nombre) like '%' || nexo_norm('ana') || '%'. Lo mismo con responsable, persona o proyecto.\n- Une por usuario_id cuando cruces vistas. Puedes hacer varias consultas si hace falta.\n- Si una consulta falla, corrígela y vuelve a intentar.\n\nCómo responder:\n- En español, breve y directo: primero la respuesta, luego los datos que la sostienen.\n- Usa listas con \"- \" y **negritas** para lo importante. No uses tablas ni encabezados.\n- Cita de dónde sale cada dato (nombre de la reunión y fecha, o actividad).\n- Sobre comunicación, usa solo hechos observables: % de voz, si sus actualizaciones tenían dato y siguiente paso, si comunicó bloqueos, si cumplió compromisos. No juzgues personalidad, tono ni capacidad.\n- Hablar poco no es bajo rendimiento: contrástalo con sus actividades antes de concluir.\n- Sugiere, no decidas: la evaluación final es de la líder.\n- Si no hay datos suficientes, dilo y explica qué falta (por ejemplo, reuniones sin transcripción).\n- Nunca muestres SQL ni nombres de vistas en la respuesta.",
-          "maxIterations": 10,
-          "enableStreaming": false
-        }
+        "operation": "executeQuery",
+        "query": "select\n  (select coalesce(json_agg(x), '[]')::text from (select * from ia_personas order by nombre) x) as personas,\n  (select coalesce(json_agg(x), '[]')::text from (select * from ia_rendimiento_semana order by nombre) x) as rendimiento_semana,\n  (select coalesce(json_agg(x), '[]')::text from ia_riesgos_hoy x) as riesgos_hoy,\n  (select coalesce(json_agg(x), '[]')::text from (\n     select proyecto, cliente, responsable, titulo, estatus, avance_pct, fecha_vencimiento, vencida, ultimo_avance, siguiente_accion\n     from ia_actividades where estatus <> 'Completado' order by fecha_vencimiento nulls last limit 150) x) as actividades_abiertas,\n  (select coalesce(json_agg(x), '[]')::text from (\n     select responsable, titulo, proyecto, cerrada_el from ia_actividades\n     where estatus = 'Completado' and cerrada_el >= nexo_hoy() - 30 order by cerrada_el desc limit 100) x) as cerradas_30_dias,\n  (select coalesce(json_agg(x), '[]')::text from (\n     select responsable, actividad, proyecto, tipo, descripcion, responsable_externo, dias_abierto\n     from ia_bloqueos where abierto order by dias_abierto desc limit 60) x) as bloqueos_abiertos,\n  (select coalesce(json_agg(x), '[]')::text from (\n     select fecha, responsable, actividad, estatus, avance_pct, left(descripcion, 200) as descripcion\n     from ia_avances where fecha >= nexo_hoy() - 14 order by fecha desc limit 150) x) as avances_14_dias,\n  (select coalesce(json_agg(x), '[]')::text from (\n     select sesion_id, titulo, fecha, duracion_min, proyecto, resumen, acuerdos, cita\n     from ia_sesiones where fecha >= nexo_hoy() - 45 order by fecha desc limit 30) x) as sesiones_45_dias,\n  (select coalesce(json_agg(x), '[]')::text from (\n     select sesion, fecha, persona, externo, pct_voz, intervenciones, actualizacion_completa, menciono_bloqueo, observacion\n     from ia_participaciones where fecha >= nexo_hoy() - 45 order by fecha desc limit 300) x) as participaciones_45_dias,\n  (select coalesce(json_agg(x), '[]')::text from (\n     select sesion, fecha_sesion, responsable, descripcion, fecha_limite, estado\n     from ia_compromisos where fecha_sesion >= nexo_hoy() - 60 order by fecha_sesion desc limit 150) x) as compromisos_60_dias",
+        "options": {}
       },
-      "id": "e0ca426a-0e95-4b1a-bc7f-2ce2790d9d7f",
-      "name": "Asistente",
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 2.2,
+      "id": "f6cf6fdd-ffc2-4978-9cdc-6790da125fd0",
+      "name": "Datos de Nexo",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
       "position": [
-        300,
+        240,
         0
       ]
     },
     {
       "parameters": {
-        "modelName": "models/gemini-3-flash-preview",
+        "promptType": "define",
+        "text": "=Eres el asistente de Nexo, el sistema de seguimiento del área de Desarrollo de Software. Hablas con {{ $('Webhook de Nexo').first().json.body.usuario }}, líder del equipo. Hoy es {{ $('Webhook de Nexo').first().json.body.hoy }}.\n\nResponde la pregunta usando SOLO los datos de abajo (vienen de la base de datos de Nexo en este momento).\n\nCómo responder:\n- En español, breve y directo: primero la respuesta, luego los datos que la sostienen.\n- Usa listas con \"- \" y **negritas** para lo importante. No uses tablas ni encabezados.\n- Cita de dónde sale cada dato (nombre de la reunión y fecha, o actividad y proyecto).\n- Sobre comunicación usa solo hechos observables: % de voz, si sus actualizaciones tenían dato y siguiente paso, si comunicó bloqueos, si cumplió compromisos. No juzgues personalidad, tono ni capacidad.\n- Hablar poco no es bajo rendimiento: contrástalo con sus actividades antes de concluir.\n- Sugiere, no decidas: la evaluación final es de la líder.\n- Si los datos no alcanzan para responder, dilo y explica qué falta (por ejemplo, que todavía no hay reuniones transcritas).\n- No menciones nombres de tablas, JSON ni SQL.\n\nDATOS DE NEXO\nPersonas del equipo: {{ $json.personas }}\nRendimiento de esta semana por persona: {{ $json.rendimiento_semana }}\nRiesgos de hoy: {{ $json.riesgos_hoy }}\nActividades abiertas: {{ $json.actividades_abiertas }}\nActividades cerradas en los últimos 30 días: {{ $json.cerradas_30_dias }}\nBloqueos abiertos: {{ $json.bloqueos_abiertos }}\nAvances registrados en los últimos 14 días: {{ $json.avances_14_dias }}\nReuniones de los últimos 45 días: {{ $json.sesiones_45_dias }}\nParticipación por persona en esas reuniones: {{ $json.participaciones_45_dias }}\nCompromisos de reuniones (60 días): {{ $json.compromisos_60_dias }}\n\nPREGUNTA\n{{ $('Webhook de Nexo').first().json.body.pregunta }}"
+      },
+      "id": "dc3c7de8-5282-452e-97cc-62809bdf7a77",
+      "name": "Responder con IA",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        480,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.8-flash",
         "options": {
           "maxOutputTokens": 4096,
           "temperature": 0.2
         }
       },
-      "id": "7e7bcf4e-cea6-4f81-806f-fb1be37213c3",
+      "id": "6f3fc864-b8f1-4974-bfe2-f4208639d068",
       "name": "Gemini",
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1.2,
       "position": [
-        160,
-        240
-      ]
-    },
-    {
-      "parameters": {
-        "sessionIdType": "customKey",
-        "sessionKey": "={{ $('Webhook de Nexo').item.json.body.sesion }}",
-        "contextWindowLength": 8
-      },
-      "id": "38eb3373-80e4-4afa-a585-c69f9f1cec40",
-      "name": "Memoria de la conversación",
-      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
-      "typeVersion": 1.3,
-      "position": [
-        320,
-        240
-      ]
-    },
-    {
-      "parameters": {
-        "descriptionType": "manual",
-        "toolDescription": "Consulta la base de datos de Nexo en modo solo lectura. Recibe una sola consulta SELECT de PostgreSQL sobre las vistas ia_* y devuelve las filas.",
-        "operation": "executeQuery",
-        "query": "={{ $fromAI('consulta_sql', 'Una sola consulta SELECT de PostgreSQL sobre las vistas ia_*, con LIMIT', 'string') }}",
-        "options": {}
-      },
-      "id": "ac96f889-e759-4075-acc2-421fa6917189",
-      "name": "consultar_nexo",
-      "type": "n8n-nodes-base.postgresTool",
-      "typeVersion": 2.5,
-      "position": [
         480,
-        240
+        220
       ]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ { respuesta: $json.output } }}",
+        "responseBody": "={{ { respuesta: $json.text } }}",
         "options": {}
       },
-      "id": "fc98aa79-25e3-4f99-8b69-3dc4fef99830",
+      "id": "22abb54d-417e-4d21-9406-6860d3e222db",
       "name": "Responder a Nexo",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        660,
+        800,
         0
       ]
     }
@@ -124,14 +105,25 @@
       "main": [
         [
           {
-            "node": "Asistente",
+            "node": "Datos de Nexo",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Asistente": {
+    "Datos de Nexo": {
+      "main": [
+        [
+          {
+            "node": "Responder con IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Responder con IA": {
       "main": [
         [
           {
@@ -146,30 +138,8 @@
       "ai_languageModel": [
         [
           {
-            "node": "Asistente",
+            "node": "Responder con IA",
             "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Memoria de la conversación": {
-      "ai_memory": [
-        [
-          {
-            "node": "Asistente",
-            "type": "ai_memory",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "consultar_nexo": {
-      "ai_tool": [
-        [
-          {
-            "node": "Asistente",
-            "type": "ai_tool",
             "index": 0
           }
         ]
@@ -178,12 +148,8 @@
   },
   "settings": {
     "executionOrder": "v1",
-    "timezone": "America/Mexico_City",
-    "saveManualExecutions": true
+    "timezone": "America/Mexico_City"
   },
   "pinData": {},
-  "active": false,
-  "meta": {
-    "templateCredsSetupCompleted": false
-  }
+  "active": false
 }
